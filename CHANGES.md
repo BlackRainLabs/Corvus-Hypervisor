@@ -4,6 +4,22 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-02] - Operator Console: restore Phase 9 edit surfaces
+
+**Documents Modified:**
+- Management templates (tools/skills/workspaces/memory/inference/users), `ui.py`, `ui_client.py`, `corvus.css`
+- `src/corvus/llm/registry.py` (public provider payload includes `api_base_url`)
+- MANAGEMENT-API, OPERATIONS
+
+**Key Changes:**
+- Live GUI was briefly bound to a pre–Phase 9 process on `:8080`; Phase 9 stack is the active server again.
+- Catalog/provider/group rows now have inline Edit/Delete; taxonomy badges no longer misuse `read-only` for status counts.
+- Roles glossary tagged `informational`; LLM public catalog exposes `api_base_url` while still redacting credentials.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-02] - Phase 9.4: Runtime settings + LLM provider registry
 
 **Documents Modified:**

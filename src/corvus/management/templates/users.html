@@ -64,7 +64,7 @@
 </div>
 
 <div class="section" id="roles">
-  <h2>Roles &amp; Privileges <span class="badge read-only">read-only</span></h2>
+  <h2>Roles &amp; Privileges <span class="badge informational">informational</span></h2>
   <div class="card">
     <div class="kv">
       <dt>admin</dt><dd>Full control; can approve elevations and manage rules.</dd>
@@ -89,9 +89,31 @@
           <td>{{ g.get('members', []) | join(', ') or '-' }}</td>
           <td class="faint">{{ g.get('rule_ids', []) | join(', ') or '-' }}</td>
           <td>
-            <form method="post" action="{{ prefix }}/users/groups/{{ g.get('id') }}/delete" onsubmit="return confirm('Delete group?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/users/groups/create">
+                  <input type="hidden" name="group_id" value="{{ g.get('id') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Parent group</label><input name="parent_group" value="{{ g.get('parent_group') or '' }}"></div>
+                    <div class="field"><label>Inherited rules</label>
+                      <select name="inherited_rules">
+                        <option value="1" {% if g.get('inherited_rules') %}selected{% endif %}>yes</option>
+                        <option value="0" {% if not g.get('inherited_rules') %}selected{% endif %}>no</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="field"><label>Members</label><input name="members" value="{{ g.get('members', []) | join(', ') }}"></div>
+                    <div class="field"><label>Rule IDs</label><input name="rule_ids" value="{{ g.get('rule_ids', []) | join(', ') }}"></div>
+                  </div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/users/groups/{{ g.get('id') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete group?');">
+                  <button class="btn sm danger" type="submit">Delete group</button>
+                </form>
+              </div>
+            </details>
           </td>
         </tr>
       {% else %}<tr><td colspan="5" class="empty">No groups</td></tr>{% endfor %}

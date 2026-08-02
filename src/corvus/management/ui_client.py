@@ -188,7 +188,7 @@ NAV: tuple[NavItem, ...] = (
         subs=(
             NavSub("Users", "#users", "edit"),
             NavSub("Create User", "#create-user", "edit"),
-            NavSub("Roles & Privileges", "#roles", "read-only"),
+            NavSub("Roles & Privileges", "#roles", "informational"),
             NavSub("Groups", "#groups", "edit"),
         ),
     ),

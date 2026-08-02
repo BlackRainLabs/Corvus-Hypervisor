@@ -45,6 +45,7 @@ class ProviderConfig:
     def public_payload(self) -> dict[str, Any]:
         return {
             "provider_id": self.provider_id,
+            "api_base_url": self.api_base_url,
             "supported_models": list(self.supported_models),
             "hosted_tools_allowed": self.hosted_tools_allowed,
             "allowed_hosted_tools": list(self.allowed_hosted_tools),

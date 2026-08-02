@@ -22,9 +22,33 @@
           <td><span class="badge {% if t.get('risk_level') == 'high' %}danger{% elif t.get('risk_level') == 'medium' %}warn{% else %}ok{% endif %}">{{ t.get('risk_level') }}</span></td>
           <td class="faint">{{ t.get('package_source') }}</td>
           <td>
-            <form method="post" action="{{ prefix }}/tools/catalog/tools/{{ t.get('name') }}/delete" onsubmit="return confirm('Delete tool?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/tools/catalog/tools">
+                  <input type="hidden" name="name" value="{{ t.get('name') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Version</label><input name="version" value="{{ t.get('version') }}" required></div>
+                    <div class="field"><label>Risk</label>
+                      <select name="risk_level">
+                        {% for level in ['low','medium','high'] %}
+                        <option value="{{ level }}" {% if t.get('risk_level') == level %}selected{% endif %}>{{ level }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="field"><label>Package source</label><input name="package_source" value="{{ t.get('package_source') }}" required></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="field"><label>Entrypoint</label><input name="entrypoint" value="{{ t.get('entrypoint') }}" required></div>
+                    <div class="field"><label>Permissions</label><input name="permissions" value="{{ t.get('permissions', []) | join(', ') }}"></div>
+                  </div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/tools/catalog/tools/{{ t.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete tool?');">
+                  <button class="btn sm danger" type="submit">Delete tool</button>
+                </form>
+              </div>
+            </details>
           </td>
         </tr>
       {% else %}<tr><td colspan="7" class="empty">No tools</td></tr>{% endfor %}
@@ -64,9 +88,26 @@
           <td>{{ s.get('exposed_tool_schemas', []) | join(', ') or '-' }}</td>
           <td class="faint">{{ s.get('package_source') }}</td>
           <td>
-            <form method="post" action="{{ prefix }}/tools/catalog/skills/{{ s.get('name') }}/delete" onsubmit="return confirm('Delete skill?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/tools/catalog/skills">
+                  <input type="hidden" name="name" value="{{ s.get('name') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Version</label><input name="version" value="{{ s.get('version') }}" required></div>
+                    <div class="field"><label>Package source</label><input name="package_source" value="{{ s.get('package_source') }}" required></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="field"><label>Runtime dependencies</label><input name="runtime_dependencies" value="{{ s.get('runtime_dependencies', []) | join(', ') }}"></div>
+                    <div class="field"><label>Exposed tool schemas</label><input name="exposed_tool_schemas" value="{{ s.get('exposed_tool_schemas', []) | join(', ') }}"></div>
+                  </div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/tools/catalog/skills/{{ s.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete skill?');">
+                  <button class="btn sm danger" type="submit">Delete skill</button>
+                </form>
+              </div>
+            </details>
           </td>
         </tr>
       {% else %}<tr><td colspan="6" class="empty">No skills</td></tr>{% endfor %}
@@ -100,13 +141,36 @@
           <td><strong>{{ w.get('id') }}</strong></td>
           <td class="mono">{{ w.get('source') }}</td>
           <td class="mono">{{ w.get('mount_path') }}</td>
-          <td><span class="badge {{ 'warn' if w.get('mount_mode') == 'rw' else 'read-only' }}">{{ w.get('mount_mode') }}</span></td>
+          <td><span class="badge {{ 'warn' if w.get('mount_mode') == 'rw' else 'muted' }}">{{ w.get('mount_mode') }}</span></td>
           <td>{{ w.get('allowed_agents', []) | join(', ') }}</td>
           <td class="faint">{{ w.get('retention_policy') }}</td>
           <td>
-            <form method="post" action="{{ prefix }}/tools/catalog/workspaces/{{ w.get('id') }}/delete" onsubmit="return confirm('Delete workspace?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/tools/catalog/workspaces">
+                  <input type="hidden" name="id" value="{{ w.get('id') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Source</label><input name="source" value="{{ w.get('source') }}" required></div>
+                    <div class="field"><label>Mount path</label><input name="mount_path" value="{{ w.get('mount_path') }}" required></div>
+                    <div class="field"><label>Mode</label>
+                      <select name="mount_mode">
+                        <option value="ro" {% if w.get('mount_mode') == 'ro' %}selected{% endif %}>ro</option>
+                        <option value="rw" {% if w.get('mount_mode') == 'rw' %}selected{% endif %}>rw</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="field"><label>Allowed agents</label><input name="allowed_agents" value="{{ w.get('allowed_agents', []) | join(', ') }}"></div>
+                    <div class="field"><label>Retention</label><input name="retention_policy" value="{{ w.get('retention_policy') }}"></div>
+                  </div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/tools/catalog/workspaces/{{ w.get('id') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete workspace?');">
+                  <button class="btn sm danger" type="submit">Delete workspace</button>
+                </form>
+              </div>
+            </details>
           </td>
         </tr>
       {% else %}<tr><td colspan="7" class="empty">No workspaces</td></tr>{% endfor %}

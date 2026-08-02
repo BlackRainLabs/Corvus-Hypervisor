@@ -389,6 +389,9 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         mount_mode: str = Form(default="ro"),
         allowed_agents: str = Form(default="*"),
         retention_policy: str = Form(default="ephemeral"),
+        max_records: str = Form(default="1000"),
+        max_record_bytes: str = Form(default="65536"),
+        default_ttl_seconds: str = Form(default=""),
     ) -> RedirectResponse:
         require_session(request)
         dest = "/tools"
@@ -421,13 +424,24 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             }
         elif kind == "memory-namespaces":
             dest = "/memory"
+            ttl: int | None = None
+            if default_ttl_seconds.strip():
+                try:
+                    ttl = int(default_ttl_seconds)
+                except ValueError:
+                    return redirect(dest, err="default_ttl_seconds must be an integer")
+            try:
+                records = int(max_records or "1000")
+                record_bytes = int(max_record_bytes or "65536")
+            except ValueError:
+                return redirect(dest, err="quota fields must be integers")
             body = {
                 "name": name,
                 "retention_policy": retention_policy or "agent-private",
                 "quota": {
-                    "max_records": 1000,
-                    "max_record_bytes": 65536,
-                    "default_ttl_seconds": None,
+                    "max_records": records,
+                    "max_record_bytes": record_bytes,
+                    "default_ttl_seconds": ttl,
                 },
             }
             kind = "memory_namespaces"
@@ -501,16 +515,33 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         provider_id: str = Form(...),
         api_base_url: str = Form(default="stub://local"),
         supported_models: str = Form(default=""),
-        credential_ref: str = Form(default="none"),
+        credential_ref: str = Form(default=""),
         hosted_tools_allowed: str = Form(default="0"),
         allowed_hosted_tools: str = Form(default=""),
     ) -> RedirectResponse:
         require_session(request)
+        existing = None
+        catalog = await api.get("/v1/catalog/llm-providers")
+        for entry in catalog.get("llm_providers", []):
+            if entry.get("provider_id") == provider_id:
+                existing = entry
+                break
+        # Preserve write-only credential when blank; fall back via DB catalog if present
+        db_entry = await ctx.db.get_catalog_entry("llm_providers", provider_id)
+        cred = credential_ref.strip()
+        if not cred:
+            if db_entry and db_entry.get("credential_ref"):
+                cred = str(db_entry["credential_ref"])
+            else:
+                cred = "none"
         body = {
             "provider_id": provider_id,
-            "api_base_url": api_base_url,
+            "api_base_url": api_base_url
+            or (existing or {}).get("api_base_url")
+            or (db_entry or {}).get("api_base_url")
+            or "stub://local",
             "supported_models": _split_csv(supported_models),
-            "credential_ref": credential_ref,
+            "credential_ref": cred,
             "quota_class": "dev",
             "hosted_tools_allowed": hosted_tools_allowed == "1",
             "allowed_hosted_tools": _split_csv(allowed_hosted_tools),

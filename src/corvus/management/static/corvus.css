@@ -147,10 +147,12 @@ td.mono, .mono { font-family: var(--mono); font-size: 12px; }
 }
 .badge.edit { color: var(--accent); border-color: var(--accent-dim); }
 .badge.read-only { color: var(--text-faint); }
+.badge.informational { color: var(--text-faint); border-color: var(--border); }
 .badge.ok { color: var(--ok); border-color: #1c3b23; background: #0f2415; }
 .badge.warn { color: var(--warn); border-color: #3d310f; background: #251d08; }
 .badge.danger { color: var(--danger); border-color: var(--danger-dim); background: #2a1211; }
 .badge.info { color: var(--accent); border-color: var(--accent-dim); background: #101c33; }
+.badge.muted { color: var(--text-faint); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.danger { background: var(--danger); }
 

@@ -176,7 +176,8 @@ Environment variables:
 
 Credential refs: `env:VAR_NAME`, `file:/path/to/secret`, or `none` (no auth header). Keys are read at call time and never logged or returned via catalog/handshake APIs.
 
-Public catalog: `GET /v1/catalog/llm-providers` returns `provider_id`, `supported_models`, `hosted_tools_allowed`, and `allowed_hosted_tools` (no secrets).
+Public catalog: `GET /v1/catalog/llm-providers` returns `provider_id`, `api_base_url`,
+`supported_models`, `hosted_tools_allowed`, and `allowed_hosted_tools` (no credential secrets).
 
 ### Tool execution modes
 

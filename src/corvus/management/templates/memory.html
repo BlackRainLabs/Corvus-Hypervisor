@@ -23,9 +23,24 @@
           <td>{{ q.get('max_record_bytes') }}</td>
           <td>{{ q.get('default_ttl_seconds') if q.get('default_ttl_seconds') is not none else '-' }}</td>
           <td>
-            <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces/{{ n.get('name') }}/delete" onsubmit="return confirm('Delete namespace template?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces">
+                  <input type="hidden" name="name" value="{{ n.get('name') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Retention policy</label><input name="retention_policy" value="{{ n.get('retention_policy') }}"></div>
+                    <div class="field"><label>max_records</label><input name="max_records" type="number" value="{{ q.get('max_records') or 1000 }}"></div>
+                    <div class="field"><label>max_record_bytes</label><input name="max_record_bytes" type="number" value="{{ q.get('max_record_bytes') or 65536 }}"></div>
+                  </div>
+                  <div class="field"><label>default_ttl_seconds</label><input name="default_ttl_seconds" type="number" value="{{ q.get('default_ttl_seconds') or '' }}" placeholder="optional"></div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces/{{ n.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete namespace template?');">
+                  <button class="btn sm danger" type="submit">Delete namespace</button>
+                </form>
+              </div>
+            </details>
           </td>
         </tr>
       {% else %}<tr><td colspan="6" class="empty">No namespaces</td></tr>{% endfor %}
@@ -34,9 +49,14 @@
   </div>
   <div class="card" style="margin-top:12px;">
     <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces">
-      <div class="form-row">
+      <div class="form-row cols-3">
         <div class="field"><label>Name</label><input name="name" required placeholder="shared-knowledge"></div>
         <div class="field"><label>Retention policy</label><input name="retention_policy" value="agent-private"></div>
+        <div class="field"><label>max_records</label><input name="max_records" type="number" value="1000"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>max_record_bytes</label><input name="max_record_bytes" type="number" value="65536"></div>
+        <div class="field"><label>default_ttl_seconds</label><input name="default_ttl_seconds" type="number" placeholder="optional"></div>
       </div>
       <button class="btn primary" type="submit">Save namespace</button>
     </form>

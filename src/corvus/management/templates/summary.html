@@ -11,7 +11,7 @@
 
 <div class="grid cols-2">
   <div class="section" style="margin-bottom:0;">
-    <h2>Pending Elevations <span class="badge {{ 'warn' if pending_elevations else 'read-only' }}">{{ pending_elevations | length }}</span></h2>
+    <h2>Pending Elevations <span class="badge {{ 'warn' if pending_elevations else 'muted' }}">{{ pending_elevations | length }}</span></h2>
     <div class="table-wrap">
       <table>
         <thead><tr><th>ID</th><th>Agent</th><th>Created</th><th></th></tr></thead>

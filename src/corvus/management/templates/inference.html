@@ -9,42 +9,69 @@
 
 <div class="section" id="providers">
   <h2>LLM Providers <span class="badge edit">edit</span></h2>
-  <p class="help">Credential refs are write-only after set; clear values are never returned by the catalog API.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Provider</th><th>Supported Models</th><th>Hosted Tools</th><th>Allowed Hosted Tools</th><th></th></tr></thead>
-      <tbody>
-      {% for p in providers %}
-        <tr>
-          <td><strong>{{ p.get('provider_id') }}</strong></td>
-          <td>{{ p.get('supported_models', []) | join(', ') }}</td>
-          <td><span class="badge {{ 'info' if p.get('hosted_tools_allowed') else 'read-only' }}">{{ 'allowed' if p.get('hosted_tools_allowed') else 'off' }}</span></td>
-          <td class="faint">{{ p.get('allowed_hosted_tools', []) | join(', ') or '-' }}</td>
-          <td>
-            <form method="post" action="{{ prefix }}/tools/catalog/llm_providers/{{ p.get('provider_id') }}/delete" onsubmit="return confirm('Delete provider?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-      {% else %}<tr><td colspan="5" class="empty">No providers configured</td></tr>{% endfor %}
-      </tbody>
-    </table>
+  <p class="help">Edit any provider below and click Save. Credential refs are write-only after set (leave blank to keep the current value).</p>
+  {% for p in providers %}
+  <div class="card" style="margin-bottom:12px;">
+    <form method="post" action="{{ prefix }}/inference/providers">
+      <div class="form-row cols-3">
+        <div class="field">
+          <label>Provider ID</label>
+          <input name="provider_id" value="{{ p.get('provider_id') }}" readonly>
+        </div>
+        <div class="field">
+          <label>API base URL</label>
+          <input name="api_base_url" value="{{ p.get('api_base_url') or '' }}" required>
+        </div>
+        <div class="field">
+          <label>Supported models</label>
+          <input name="supported_models" value="{{ p.get('supported_models', []) | join(', ') }}">
+        </div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field">
+          <label>Credential ref <span class="badge danger">secret</span></label>
+          <input name="credential_ref" value="" placeholder="******** — leave blank to keep">
+        </div>
+        <div class="field">
+          <label>Hosted tools</label>
+          <select name="hosted_tools_allowed">
+            <option value="0" {% if not p.get('hosted_tools_allowed') %}selected{% endif %}>off</option>
+            <option value="1" {% if p.get('hosted_tools_allowed') %}selected{% endif %}>allowed</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Allowed hosted tools</label>
+          <input name="allowed_hosted_tools" value="{{ p.get('allowed_hosted_tools', []) | join(', ') }}">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" type="submit">Save {{ p.get('provider_id') }}</button>
+      </div>
+    </form>
+    <form method="post" action="{{ prefix }}/tools/catalog/llm_providers/{{ p.get('provider_id') }}/delete" style="margin-top:8px;" onsubmit="return confirm('Delete provider {{ p.get('provider_id') }}?');">
+      <button class="btn sm danger" type="submit">Delete {{ p.get('provider_id') }}</button>
+    </form>
   </div>
+  {% else %}
+  <p class="empty">No providers configured</p>
+  {% endfor %}
+
   <div class="card" style="margin-top:12px;">
+    <h3>Add provider</h3>
     <form method="post" action="{{ prefix }}/inference/providers">
       <div class="form-row cols-3">
         <div class="field"><label>Provider ID</label><input name="provider_id" required></div>
-        <div class="field"><label>API base URL</label><input name="api_base_url" value="stub://local" required></div>
-        <div class="field"><label>Supported models</label><input name="supported_models" placeholder="stub-v1, gpt-4o"></div>
+        <div class="field"><label>API base URL</label><input name="api_base_url" value="https://api.openai.com/v1" required></div>
+        <div class="field"><label>Supported models</label><input name="supported_models" placeholder="gpt-4o, stub-v1"></div>
       </div>
       <div class="form-row cols-3">
-        <div class="field"><label>Credential ref</label><input name="credential_ref" value="none"><div class="help">write-only after set</div></div>
+        <div class="field"><label>Credential ref</label><input name="credential_ref" value="none"><div class="help">e.g. env:OPENAI_API_KEY</div></div>
         <div class="field"><label>Hosted tools</label>
           <select name="hosted_tools_allowed"><option value="0">off</option><option value="1">allowed</option></select>
         </div>
         <div class="field"><label>Allowed hosted tools</label><input name="allowed_hosted_tools" placeholder="openai:web_search"></div>
       </div>
-      <button class="btn primary" type="submit">Save provider</button>
+      <button class="btn primary" type="submit">Create provider</button>
     </form>
   </div>
 </div>

@@ -225,7 +225,8 @@ async def test_llm_provider_crud_reloads_registry(app_ctx):
             p for p in public.json()["llm_providers"] if p["provider_id"] == "phase9-llm"
         )
         assert "credential_ref" not in entry
-        assert "api_base_url" not in entry
+        assert "api_base_url" in entry
+        assert entry["api_base_url"].endswith("/v1")
 
         deleted = await client.delete(
             "/v1/catalog/llm_providers/phase9-llm", headers=headers

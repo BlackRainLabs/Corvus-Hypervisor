@@ -19,7 +19,7 @@
         <tr>
           <td><a href="{{ prefix }}/agents/{{ a.get('id') }}"><strong>{{ a.get('id') }}</strong></a><br><span class="faint mono">{{ a.get('manifest_hash', '')[:12] }}</span></td>
           <td>
-            <span class="badge {% if st == 'running' %}ok{% elif st in ['failed','degraded'] %}danger{% elif st == 'stopped' %}read-only{% else %}warn{% endif %}">{{ st }}</span>
+            <span class="badge {% if st == 'running' %}ok{% elif st in ['failed','degraded'] %}danger{% elif st == 'stopped' %}muted{% else %}warn{% endif %}">{{ st }}</span>
           </td>
           <td class="mono faint">{{ a.get('vm_instance_id') or '-' }}</td>
           <td>{{ a.get('guest_cid') or '-' }}</td>
