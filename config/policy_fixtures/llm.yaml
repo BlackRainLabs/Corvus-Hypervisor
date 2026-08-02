@@ -1,0 +1,69 @@
+# LLM gateway policy regression fixtures
+fixtures:
+  - id: allow-llm-request-stub
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine3
+      type: llm_request
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        provider: stub
+        model: stub-v1
+        messages:
+          - role: user
+            content: hello
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+    expect:
+      decision: allow
+      matched_rule_ids:
+        - allow-llm-request
+
+  - id: deny-llm-request-unknown-provider
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine3
+      type: llm_request
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        provider: unknown-provider
+        model: stub-v1
+        messages:
+          - role: user
+            content: hello
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+    expect:
+      decision: allow
+      matched_rule_ids:
+        - allow-llm-request
+
+  - id: deny-hybrid-llm-researcher
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine3
+      type: llm_request
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        provider: stub
+        model: stub-v1
+        messages:
+          - role: user
+            content: hello
+    context:
+      user_id: test-user
+      role: researcher
+      correlation_chain_valid: true
+      tool_execution_mode: hybrid
+    expect:
+      decision: deny
+      matched_rule_ids:
+        - deny-hybrid-llm-without-admin

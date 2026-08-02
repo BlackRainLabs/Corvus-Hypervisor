@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ user.get('id') }} — Corvus Hypervisor{% endblock %}
+{% block heading %}User · {{ user.get('id') }}{% endblock %}
+{% block content %}
+<p><a href="{{ prefix }}/users">← All users</a></p>
+<div class="section">
+  <h2>Profile</h2>
+  <div class="card">
+    <div class="kv">
+      <dt>Role</dt><dd>{{ user.get('role') }}</dd>
+      <dt>Groups</dt><dd>{{ user.get('groups', []) | join(', ') or '-' }}</dd>
+      <dt>Privileges</dt><dd>{{ user.get('privileges', []) | join(', ') or '-' }}</dd>
+      <dt>Allowed Agents</dt><dd>{{ user.get('allowed_agents', []) | join(', ') or '-' }}</dd>
+      <dt>Credential</dt><dd>{{ 'set (hashed)' if user.get('credential_hash') else 'none' }}</dd>
+    </div>
+  </div>
+</div>
+<div class="section">
+  <h2>Identity Aliases</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Platform</th><th>Value</th><th>Verified</th><th>Auth Method</th><th>Display Name</th></tr></thead>
+      <tbody>
+      {% for a in user.get('aliases', []) %}
+        <tr>
+          <td>{{ a.get('platform') }}</td>
+          <td class="mono">{{ a.get('value') }}</td>
+          <td>{{ 'yes' if a.get('verified') else 'no' }}</td>
+          <td>{{ a.get('auth_method') }}</td>
+          <td>{{ a.get('display_name') or '-' }}</td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="empty">No aliases</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="section">
+  <h2>Raw Profile</h2>
+  <pre class="code">{{ user_json }}</pre>
+</div>
+{% endblock %}

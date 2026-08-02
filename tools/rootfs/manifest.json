@@ -1,0 +1,15 @@
+{
+  "manifest_version": "1.0",
+  "engines": {
+    "engine2": {"platforms": ["api"]},
+    "engine3": {
+      "allowed_providers": ["stub"],
+      "allowed_models": ["stub-v1"],
+      "tool_execution_mode": "local",
+      "provider_tools": []
+    }
+  },
+  "launch_grants": [],
+  "rootfs_image": "corvus-test-rootfs",
+  "resource_limits": {"memory_mb": 512, "vcpu_count": 1}
+}

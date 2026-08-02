@@ -1,0 +1,174 @@
+rules:
+  - id: allow-user-query
+    priority: 100
+    subject:
+      role: ["researcher", "admin", "operator"]
+    object:
+      agent_id: "*"
+      engine: ["engine2"]
+    action:
+      type: ["user_query"]
+    condition:
+      correlation_chain_valid: true
+    effect: allow
+
+  - id: elevate-dangerous-tool-call
+    priority: 180
+    subject:
+      role: ["*"]
+    object:
+      agent_id: "*"
+      engine: ["engine1", "engine3"]
+    action:
+      type: ["tool_call"]
+    condition:
+      correlation_chain_valid: true
+      dangerous_action: true
+    effect: elevate
+
+  - id: allow-tool-call
+    priority: 90
+    subject:
+      role: ["researcher", "admin"]
+    object:
+      agent_id: "*"
+      engine: ["engine1", "engine3"]
+    action:
+      type: ["tool_call", "tool_result"]
+    condition:
+      correlation_chain_valid: true
+    effect: allow
+
+  - id: allow-llm-request
+    priority: 90
+    subject:
+      role: ["researcher", "admin", "operator"]
+    object:
+      agent_id: "*"
+      engine: ["engine3"]
+    action:
+      type: ["llm_request", "llm_response"]
+    condition:
+      correlation_chain_valid: true
+      tool_execution_mode: ["local"]
+    effect: allow
+
+  - id: allow-llm-request-hybrid
+    priority: 95
+    subject:
+      role: ["admin"]
+    object:
+      agent_id: "*"
+      engine: ["engine3"]
+    action:
+      type: ["llm_request", "llm_response"]
+    condition:
+      correlation_chain_valid: true
+      tool_execution_mode: ["hybrid"]
+    effect: allow
+
+  - id: deny-hybrid-llm-without-admin
+    priority: 210
+    subject:
+      role: ["researcher", "operator", "anonymous"]
+    object:
+      agent_id: "*"
+      engine: ["engine3"]
+    action:
+      type: ["llm_request"]
+    condition:
+      tool_execution_mode: ["hybrid"]
+    effect: deny
+
+  - id: deny-engine3-memory
+    priority: 200
+    subject:
+      role: ["*"]
+    object:
+      agent_id: "*"
+      engine: ["engine3"]
+    action:
+      type: ["memory:*"]
+    condition: {}
+    effect: deny
+
+  - id: allow-engine4-memory-with-grant
+    priority: 95
+    subject:
+      role: ["*"]
+    object:
+      agent_id: "*"
+      engine: ["engine4"]
+      target_agent: "*"
+    action:
+      type: ["memory:*"]
+    condition:
+      correlation_chain_valid: true
+      has_valid_grant: true
+    effect: allow
+    else: elevate
+
+  - id: deny-repeated-grant-denials
+    priority: 150
+    subject:
+      role: ["*"]
+    object:
+      agent_id: "*"
+      engine: ["engine4"]
+    action:
+      type: ["memory:*"]
+    condition:
+      correlation_chain_valid: true
+      repeated_grant_denials: { gt: 3 }
+    effect: deny
+
+  - id: deny-cross-agent-scope-spike
+    priority: 155
+    subject:
+      role: ["*"]
+    object:
+      agent_id: "*"
+      engine: ["engine4"]
+    action:
+      type: ["memory:*"]
+    condition:
+      cross_agent_scope_spike: { gt: 10 }
+    effect: deny
+
+  - id: elevate-message-rate-anomaly
+    priority: 170
+    subject:
+      role: ["*"]
+    object:
+      agent_id: "*"
+    action:
+      type: ["*"]
+    condition:
+      message_rate_anomaly: { gt: 3.0 }
+    effect: elevate
+
+  - id: elevate-tool-pattern-deviation
+    priority: 165
+    subject:
+      role: ["*"]
+    object:
+      agent_id: "*"
+      engine: ["engine1"]
+    action:
+      type: ["tool_call"]
+    condition:
+      tool_pattern_deviation: true
+    effect: elevate
+
+  - id: allow-agent-response
+    priority: 80
+    subject:
+      role: ["researcher", "admin", "operator"]
+    object:
+      agent_id: "*"
+      engine: ["engine2"]
+    action:
+      type: ["agent_response"]
+    condition:
+      correlation_chain_valid: true
+    effect: allow

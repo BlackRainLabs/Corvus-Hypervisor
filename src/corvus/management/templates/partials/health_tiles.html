@@ -1,0 +1,39 @@
+{% set server = health.get('server', {}) %}
+{% set reg = health.get('vm_registry', {}) %}
+<div class="grid cols-4">
+  <div class="tile">
+    <div class="label">Status</div>
+    <div class="value small">
+      <span class="dot {{ 'ok' if health.get('status') == 'ok' else 'warn' }}"></span>
+      {{ health.get('status', 'unknown') | upper }}
+    </div>
+  </div>
+  <div class="tile">
+    <div class="label">Active Sessions</div>
+    <div class="value">{{ server.get('active_sessions', 0) }}</div>
+  </div>
+  <div class="tile">
+    <div class="label">VMs (active / failed)</div>
+    <div class="value">{{ reg.get('active', 0) }} <span class="faint" style="font-size:16px;">/ {{ reg.get('failed', 0) }}</span></div>
+  </div>
+  <div class="tile">
+    <div class="label">Pending Replay</div>
+    <div class="value">{{ server.get('pending_replay_depth', 0) }}</div>
+  </div>
+  <div class="tile">
+    <div class="label">Memory Sweeper</div>
+    <div class="value small"><span class="dot {{ 'ok' if server.get('memory_sweeper_running') else 'danger' }}"></span>{{ 'running' if server.get('memory_sweeper_running') else 'stopped' }}</div>
+  </div>
+  <div class="tile">
+    <div class="label">Elevation Sweeper</div>
+    <div class="value small"><span class="dot {{ 'ok' if server.get('elevation_sweeper_running') else 'danger' }}"></span>{{ 'running' if server.get('elevation_sweeper_running') else 'stopped' }}</div>
+  </div>
+  <div class="tile">
+    <div class="label">Database</div>
+    <div class="value small">{{ server.get('database', 'unknown') }}</div>
+  </div>
+  <div class="tile">
+    <div class="label">Behavioral Counters</div>
+    <div class="value small">{{ server.get('behavioral_counters_latest_at') or 'none' }}</div>
+  </div>
+</div>

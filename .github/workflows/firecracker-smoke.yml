@@ -1,0 +1,38 @@
+name: Firecracker Smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    # Firecracker requires /dev/kvm and /dev/vsock, which are not available on
+    # standard GitHub-hosted runners. Use a prepared self-hosted Linux runner.
+    runs-on: [self-hosted, linux]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Firecracker
+        run: |
+          ARCH="$(uname -m)"
+          curl -fsSL -o firecracker.tgz "https://github.com/firecracker-microvm/firecracker/releases/download/v1.7.0/firecracker-v1.7.0-${ARCH}.tgz"
+          tar xzf firecracker.tgz
+          sudo mv "release-v1.7.0-${ARCH}/firecracker-v1.7.0-${ARCH}" /usr/local/bin/firecracker
+          sudo chmod +x /usr/local/bin/firecracker
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Verify host prerequisites
+        run: |
+          test -c /dev/kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+          test -c /dev/vsock
+          docker --version
+          firecracker --version
+      - name: Build artifacts
+        run: |
+          bash tools/rootfs/fetch-kernel.sh
+          bash tools/rootfs/build.sh
+      - name: Smoke test
+        run: bash tools/vm-smoke.sh

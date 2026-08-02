@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}System — Corvus Hypervisor{% endblock %}
+{% block heading %}System{% endblock %}
+{% block topmeta %}server internals{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a href="#health">Health</a><a href="#metrics">Metrics</a><a href="#config">Configuration</a>
+</div>
+
+<div class="section" id="health">
+  <h2>Health <span class="badge read-only">read-only</span></h2>
+  {% include "partials/health_tiles.html" %}
+</div>
+
+<div class="section" id="metrics">
+  <h2>Prometheus Metrics <span class="badge read-only">read-only</span></h2>
+  <pre class="code">{{ metrics_text or 'metrics unavailable' }}</pre>
+  <p class="help">Scrape endpoint: <span class="mono">GET /v1/metrics</span>. OpenAPI docs: <a href="/docs" target="_blank">/docs</a>.</p>
+</div>
+
+<div class="section" id="config">
+  <h2>Server Configuration <span class="badge read-only">read-only</span></h2>
+  <p class="help">Secrets are redacted. Values come from environment / config files on the server.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+      <tbody>
+      {% for row in config_rows %}
+        <tr><td class="mono">{{ row.name }}</td><td class="mono faint">{{ row.value }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

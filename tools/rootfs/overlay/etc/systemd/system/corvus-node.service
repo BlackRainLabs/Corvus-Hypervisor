@@ -1,0 +1,15 @@
+[Unit]
+Description=Corvus Node gateway
+After=network.target
+Before=corvus-loop.service corvus-engine1.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/corvus/env
+Environment=PYTHONPATH=/opt/corvus
+ExecStart=/usr/bin/python3 -m corvus.node.main
+Restart=on-failure
+RuntimeDirectory=corvus
+
+[Install]
+WantedBy=multi-user.target

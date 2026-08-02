@@ -1,0 +1,37 @@
+{% if error %}
+  <div class="badge danger" style="display:block;padding:10px;">{{ error }}</div>
+{% elif result %}
+  {% set d = result.get('decision') %}
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <strong>Decision:</strong>
+      <span class="badge {{ 'ok' if d == 'allow' else ('danger' if d == 'deny' else 'warn') }}" style="font-size:13px;">{{ d }}</span>
+      {% if result.get('effective_error_code') %}<span class="mono faint">{{ result.get('effective_error_code') }}</span>{% endif %}
+    </div>
+    <h3 style="font-size:13px;margin:0 0 6px;">Matched Rules</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Rule</th><th>Priority</th><th>Effect</th><th>Passed</th><th>Reason</th></tr></thead>
+        <tbody>
+        {% for m in result.get('matched_rules', []) %}
+          <tr>
+            <td class="mono">{{ m.get('id') }}</td>
+            <td>{{ m.get('priority') }}</td>
+            <td>{{ m.get('effect') }}</td>
+            <td>{{ 'yes' if m.get('conditions_passed') else 'no' }}</td>
+            <td class="faint">{{ m.get('reason') or '-' }}</td>
+          </tr>
+        {% else %}<tr><td colspan="5" class="empty">No rules matched</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="kv" style="margin-top:14px;">
+      <dt>Grant checked</dt><dd>{{ result.get('grant_evaluation', {}).get('checked') }}</dd>
+      <dt>Grant valid</dt><dd>{{ result.get('grant_evaluation', {}).get('valid') }}</dd>
+      <dt>Quota would exceed</dt><dd>{{ result.get('quota_impact', {}).get('would_exceed') }}</dd>
+    </div>
+    {% if result.get('explanation_trace') %}
+    <details class="inline"><summary>Explanation trace</summary><div class="body"><pre class="code">{{ result.get('explanation_trace') | tojson(indent=2) }}</pre></div></details>
+    {% endif %}
+  </div>
+{% endif %}

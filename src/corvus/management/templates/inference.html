@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Inference — Corvus Hypervisor{% endblock %}
+{% block heading %}Inference{% endblock %}
+{% block topmeta %}LLM gateway{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a href="#providers">Providers</a><a href="#token-quotas">Token Quotas</a><a href="#runtime-settings">Runtime Settings</a>
+</div>
+
+<div class="section" id="providers">
+  <h2>LLM Providers <span class="badge read-only">read-only</span></h2>
+  <p class="help">Secrets (base URLs, API keys, credential refs) are never exposed by the catalog API.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Provider</th><th>Supported Models</th><th>Hosted Tools</th><th>Allowed Hosted Tools</th></tr></thead>
+      <tbody>
+      {% for p in providers %}
+        <tr>
+          <td><strong>{{ p.get('provider_id') }}</strong></td>
+          <td>{{ p.get('supported_models', []) | join(', ') }}</td>
+          <td><span class="badge {{ 'info' if p.get('hosted_tools_allowed') else 'read-only' }}">{{ 'allowed' if p.get('hosted_tools_allowed') else 'off' }}</span></td>
+          <td class="faint">{{ p.get('allowed_hosted_tools', []) | join(', ') or '-' }}</td>
+        </tr>
+      {% else %}<tr><td colspan="4" class="empty">No providers configured</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section" id="token-quotas">
+  <h2>Token Quotas &amp; Usage <span class="badge edit">edit</span></h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Key</th><th>Used</th><th>Limit</th><th>Window</th><th>Reset</th><th>Update</th></tr></thead>
+      <tbody>
+      {% for q in token_quotas %}
+        <tr>
+          <td class="mono">{{ q.get('key') }}</td>
+          <td>{{ q.get('used') }}</td>
+          <td>{{ q.get('limit') }}</td>
+          <td>{{ q.get('window_type') }}</td>
+          <td class="faint">{{ (q.get('reset_at') or '')[:19] or '-' }}</td>
+          <td>
+            <form method="post" action="{{ prefix }}/security/quotas/patch" style="display:flex;gap:6px;align-items:center;">
+              <input type="hidden" name="key" value="{{ q.get('key') }}">
+              <input type="hidden" name="window_type" value="{{ q.get('window_type') }}">
+              <input name="limit" type="number" value="{{ q.get('limit') }}" style="width:100px;">
+              <input name="used" type="number" value="{{ q.get('used') }}" style="width:90px;">
+              <button class="btn sm primary" type="submit">Save</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="6" class="empty">No token quota counters yet</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="help">Counters are created on first metered completion. Full quota management lives under Security → Quotas.</p>
+</div>
+
+<div class="section" id="runtime-settings">
+  <h2>Runtime Settings <span class="badge read-only">read-only</span></h2>
+  <div class="card">
+    <div class="kv">
+      <dt>Default provider</dt><dd>{{ settings.default_provider }}</dd>
+      <dt>Request timeout (s)</dt><dd>{{ settings.request_timeout_seconds }}</dd>
+      <dt>Daily token limit</dt><dd>{{ settings.tokens_daily_limit }}</dd>
+      <dt>Providers registry path</dt><dd class="mono">{{ settings.providers_path }}</dd>
+    </div>
+    <p class="help">Set via <span class="mono">CORVUS_LLM_*</span> and <span class="mono">config/llm_providers.yaml</span> on the server.</p>
+  </div>
+</div>
+{% endblock %}

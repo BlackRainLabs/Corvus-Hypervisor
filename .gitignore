@@ -1,0 +1,16 @@
+.DS_Store
+*.zip
+*.tar
+__pycache__/
+.venv/
+corvus.db
+corvus.db-*
+corvus-smoke.db
+corvus-smoke.db-*
+.fixture-run.db
+.fixture-run.db-*
+artifacts/
+var/
+.pytest_cache/
+.ruff_cache/
+openapi.json

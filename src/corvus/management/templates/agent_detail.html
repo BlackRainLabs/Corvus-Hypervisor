@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ agent_id }} — Corvus Hypervisor{% endblock %}
+{% block heading %}Agent · {{ agent_id }}{% endblock %}
+{% block topmeta %}<span class="mono">{{ manifest_hash[:16] }}</span>{% endblock %}
+{% block content %}
+<p><a href="{{ prefix }}/agents">← All agents</a></p>
+
+<div class="section">
+  <h2>Lifecycle</h2>
+  <div class="btn-row">
+    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/launch"><button class="btn primary" type="submit">Launch VM</button></form>
+    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/stop"><button class="btn" type="submit">Stop VM</button></form>
+  </div>
+</div>
+
+<div class="section">
+  <h2>VM Instances <span class="badge read-only">{{ vms | length }}</span></h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Instance</th><th>Status</th><th>PID</th><th>Alive</th><th>CID</th><th>Heartbeat</th><th>Error</th></tr></thead>
+      <tbody>
+      {% for vm in vms %}
+        <tr>
+          <td class="mono">{{ vm.get('vm_instance_id', '')[:12] }}</td>
+          <td><span class="badge {% if vm.get('status') == 'running' %}ok{% elif vm.get('status') in ['failed','degraded'] %}danger{% else %}warn{% endif %}">{{ vm.get('status') }}</span></td>
+          <td>{{ vm.get('pid') or '-' }}</td>
+          <td>{{ 'yes' if vm.get('pid_alive') else 'no' }}</td>
+          <td>{{ vm.get('guest_cid') or '-' }}</td>
+          <td class="faint">{{ (vm.get('last_heartbeat_at') or '')[:19] or '-' }}</td>
+          <td class="faint">{{ vm.get('last_error') or '-' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="empty">No VM instances</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Memory Namespaces <span class="badge edit">edit</span></h2>
+  {% for ns in namespaces %}
+  <div class="card">
+    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/namespaces/{{ ns.get('namespace') }}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <strong>{{ ns.get('namespace') }}</strong>
+        <span class="badge info">{{ ns.get('source') }}</span>
+        <span class="faint">{{ ns.get('retention_policy') }}</span>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field"><label>max_records</label><input name="max_records" type="number" value="{{ ns.get('quota', {}).get('max_records') }}"></div>
+        <div class="field"><label>max_record_bytes</label><input name="max_record_bytes" type="number" value="{{ ns.get('quota', {}).get('max_record_bytes') }}"></div>
+        <div class="field"><label>default_ttl_seconds</label><input name="default_ttl_seconds" type="number" value="{{ ns.get('quota', {}).get('default_ttl_seconds') or '' }}"></div>
+      </div>
+      <button class="btn sm primary" type="submit">Update quota</button>
+    </form>
+  </div>
+  {% else %}
+  <div class="empty">No namespaces assigned</div>
+  {% endfor %}
+</div>
+
+<div class="section">
+  <h2>Resolved Manifest</h2>
+  <pre class="code">{{ manifest_json }}</pre>
+</div>
+{% endblock %}

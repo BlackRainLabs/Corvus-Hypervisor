@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Overview — Corvus Hypervisor{% endblock %}
+{% block heading %}Overview{% endblock %}
+{% block topmeta %}live · refreshes every 5s{% endblock %}
+{% block content %}
+<div class="section">
+  <div id="health-tiles" hx-get="{{ prefix }}/partials/health" hx-trigger="every 5s" hx-swap="innerHTML">
+    {% include "partials/health_tiles.html" %}
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="section" style="margin-bottom:0;">
+    <h2>Pending Elevations <span class="badge {{ 'warn' if pending_elevations else 'read-only' }}">{{ pending_elevations | length }}</span></h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Agent</th><th>Created</th><th></th></tr></thead>
+        <tbody>
+        {% for e in pending_elevations %}
+          <tr>
+            <td class="mono">{{ e.get('id', '')[:8] }}</td>
+            <td>{{ e.get('agent_id') or e.get('source', {}).get('agent_id', '-') }}</td>
+            <td class="faint">{{ e.get('created_at', '')[:19] }}</td>
+            <td><a href="{{ prefix }}/security#elevations">Review</a></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">No pending elevations</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section" style="margin-bottom:0;">
+    <h2>Recent Audit Events</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Time</th><th>Event</th><th>Agent</th><th>Decision</th></tr></thead>
+        <tbody>
+        {% for log in recent_audit %}
+          <tr>
+            <td class="faint">{{ log.get('timestamp', '')[11:19] }}</td>
+            <td class="mono">{{ log.get('event_type', '-') }}</td>
+            <td>{{ log.get('agent_id') or '-' }}</td>
+            <td>
+              {% set d = log.get('decision') %}
+              {% if d %}<span class="badge {{ 'ok' if d == 'allow' else ('danger' if d == 'deny' else 'warn') }}">{{ d }}</span>{% else %}-{% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="empty">No audit events</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:10px;"><a href="{{ prefix }}/audit">Open audit browser →</a></p>
+  </div>
+</div>
+{% endblock %}

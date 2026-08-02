@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Corvus Hypervisor Operator Console{% endblock %}</title>
+  <link rel="stylesheet" href="{{ static_url }}/corvus.css">
+  <script src="{{ static_url }}/htmx.min.js"></script>
+  <script defer src="{{ static_url }}/alpine.min.js"></script>
+</head>
+<body>
+  {% if msg %}<div class="toast ok" x-data="{s:true}" x-show="s" x-init="setTimeout(()=>s=false,3500)">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="toast err" x-data="{s:true}" x-show="s" x-init="setTimeout(()=>s=false,6000)">{{ err }}</div>{% endif %}
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo"><span class="mark">C</span> Corvus Hypervisor</div>
+        <div class="sub">Operator Console</div>
+      </div>
+      <ul class="nav">
+        {% for item in nav %}
+        <li class="nav-item {% if item.id == active %}active{% endif %}">
+          <a href="{{ prefix }}{{ item.path }}">
+            <span class="nav-ico">{{ item.label[0] }}</span>
+            <span>{{ item.label }}</span>
+          </a>
+          {% if item.id == active and item.subs %}
+          <ul class="subnav">
+            {% for sub in item.subs %}
+            <li><a href="{{ prefix }}{{ item.path }}{{ sub.anchor }}">
+              {{ sub.label }}
+              {% if sub.badge %}<span class="badge {{ sub.badge }}">{{ sub.badge }}</span>{% endif %}
+            </a></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="sidebar-foot">
+        Black Rain Labs<br>R&amp;D Division
+      </div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <h1>{% block heading %}{% endblock %}</h1>
+        <span class="spacer"></span>
+        <span class="pill">{% block topmeta %}{% endblock %}</span>
+        {% if current_user %}<span class="pill">Signed in as <strong>{{ current_user }}</strong></span>{% endif %}
+        <a class="btn sm" href="{{ prefix }}/logout">Sign out</a>
+      </header>
+      <main class="content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>

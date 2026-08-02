@@ -1,0 +1,15 @@
+[Unit]
+Description=Corvus Engine 4 (Memory client)
+After=corvus-node.service
+Requires=corvus-node.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/corvus/env
+Environment=PYTHONPATH=/opt/corvus
+ExecStartPre=/bin/sh -c 'until test -S /run/corvus/node.sock; do sleep 0.2; done'
+ExecStart=/usr/bin/python3 -m corvus.runtime.engine_main --engine engine4 --daemon
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

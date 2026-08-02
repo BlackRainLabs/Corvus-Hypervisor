@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "corvus-hypervisor"
+version = "0.8.0"
+description = "Corvus Hypervisor — security-first multi-agent hypervisor"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.20.0",
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.9.0",
+    "pyyaml>=6.0.2",
+    "uvicorn>=0.32.0",
+    "sqlite-vec>=0.1.6",
+    "cryptography>=43.0.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.27.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "ruff>=0.8.0",
+]
+
+[project.scripts]
+corvus-server = "corvus.server.main:main"
+corvus-fake-node = "corvus.tools.fake_node:main"
+corvus-dummy-llm = "corvus.tools.dummy_llm_server:main"
+corvus-policy-fixtures = "corvus.tools.policy_fixtures:main"
+corvus-node = "corvus.node.main:main"
+corvus-loop = "corvus.runtime.loop:main"
+corvus-engine = "corvus.runtime.engine_main:main"
+corvus-runtime = "corvus.runtime.supervisor:main"
+corvus-vm = "corvus.vm.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/corvus"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/corvus/management/templates" = "corvus/management/templates"
+"src/corvus/management/static" = "corvus/management/static"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

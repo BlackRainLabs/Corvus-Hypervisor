@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Users & Access — Corvus Hypervisor{% endblock %}
+{% block heading %}Users &amp; Access{% endblock %}
+{% block topmeta %}{{ users | length }} users{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a href="#users">Users</a><a href="#create-user">Create User</a><a href="#roles">Roles</a><a href="#groups">Groups</a>
+</div>
+
+<div class="section" id="users">
+  <h2>Users <span class="badge edit">edit</span></h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Role</th><th>Groups</th><th>Privileges</th><th>Allowed Agents</th><th>Credential</th></tr></thead>
+      <tbody>
+      {% for u in users %}
+        <tr>
+          <td><a href="{{ prefix }}/users/{{ u.get('id') }}"><strong>{{ u.get('id') }}</strong></a></td>
+          <td><span class="badge info">{{ u.get('role') }}</span></td>
+          <td>{{ u.get('groups', []) | join(', ') or '-' }}</td>
+          <td class="faint">{{ u.get('privileges', []) | join(', ') or '-' }}</td>
+          <td>{{ u.get('allowed_agents', []) | join(', ') or '-' }}</td>
+          <td>{{ 'set' if u.get('credential_hash') else '-' }}</td>
+        </tr>
+      {% else %}<tr><td colspan="6" class="empty">No users</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section" id="create-user">
+  <h2>Create / Update User <span class="badge edit">edit</span></h2>
+  <div class="card">
+    <form method="post" action="{{ prefix }}/users/create">
+      <div class="form-row">
+        <div class="field"><label>User ID</label><input name="user_id" required placeholder="analyst-01"></div>
+        <div class="field"><label>Role</label>
+          <select name="role">
+            <option value="researcher">researcher</option>
+            <option value="operator">operator</option>
+            <option value="admin">admin</option>
+            <option value="viewer">viewer</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field"><label>Groups</label><input name="groups" placeholder="research, admins"><div class="help">comma-separated</div></div>
+        <div class="field"><label>Privileges</label><input name="privileges" placeholder="approve_elevation"><div class="help">comma-separated</div></div>
+        <div class="field"><label>Allowed Agents</label><input name="allowed_agents" placeholder="* or agent ids"><div class="help">comma-separated</div></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>PIN</label><input name="pin" type="password" autocomplete="off"><div class="help">stored as hash</div></div>
+        <div class="field"><label>Password</label><input name="password" type="password" autocomplete="off"><div class="help">stored as hash</div></div>
+      </div>
+      <button class="btn primary" type="submit">Save User</button>
+    </form>
+  </div>
+</div>
+
+<div class="section" id="roles">
+  <h2>Roles &amp; Privileges <span class="badge read-only">read-only</span></h2>
+  <div class="card">
+    <div class="kv">
+      <dt>admin</dt><dd>Full control; can approve elevations and manage rules.</dd>
+      <dt>operator</dt><dd>Operate agents and monitor; scoped mutations.</dd>
+      <dt>researcher</dt><dd>Default agent user role.</dd>
+      <dt>viewer</dt><dd>Read-only.</dd>
+      <dt>Elevation privileges</dt><dd class="mono">approve_elevation, can_approve_elevation</dd>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="groups">
+  <h2>Groups <span class="badge read-only">read-only</span></h2>
+  <div class="card">
+    <p class="muted">Group CRUD endpoints are documented in the Management API but not yet implemented on the server. Group membership is currently managed inline on each user (<span class="mono">groups</span> field). This panel will gain full CRUD when the endpoints land.</p>
+  </div>
+</div>
+{% endblock %}

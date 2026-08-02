@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in — Corvus Hypervisor Operator Console</title>
+  <link rel="stylesheet" href="{{ static_url }}/corvus.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="card login-card">
+      <div class="brand">
+        <div class="logo"><span class="mark">C</span> Corvus Hypervisor</div>
+        <div class="sub">Operator Console</div>
+      </div>
+      {% if err %}<div class="badge danger" style="display:block;text-align:center;margin:8px 0 4px;padding:8px;">{{ err }}</div>{% endif %}
+      <form method="post" action="{{ prefix }}/login">
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" autofocus autocomplete="username" required>
+          <div class="help">Corvus user id with an operator/admin role (e.g. <span class="mono">admin-user</span>).</div>
+        </div>
+        <div class="field">
+          <label for="password">Password / PIN</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required>
+          <div class="help">Validated against the user's stored credential hash in the Corvus database.</div>
+        </div>
+        <button class="btn primary" type="submit" style="width:100%;justify-content:center;">Sign in</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

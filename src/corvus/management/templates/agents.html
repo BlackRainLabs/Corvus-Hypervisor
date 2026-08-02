@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Agents — Corvus Hypervisor{% endblock %}
+{% block heading %}Agents{% endblock %}
+{% block topmeta %}{{ agents | length }} registered{% endblock %}
+{% block content %}
+<div class="tabs">
+  <a href="#all-agents">All Agents</a>
+  <a href="#create-agent">Create Agent</a>
+</div>
+
+<div class="section" id="all-agents">
+  <h2>All Agents <span class="badge edit">edit</span></h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Agent</th><th>Status</th><th>VM Instance</th><th>Guest CID</th><th>Last Error</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for a in agents %}
+        {% set st = a.get('status', 'stopped') %}
+        <tr>
+          <td><a href="{{ prefix }}/agents/{{ a.get('id') }}"><strong>{{ a.get('id') }}</strong></a><br><span class="faint mono">{{ a.get('manifest_hash', '')[:12] }}</span></td>
+          <td>
+            <span class="badge {% if st == 'running' %}ok{% elif st in ['failed','degraded'] %}danger{% elif st == 'stopped' %}read-only{% else %}warn{% endif %}">{{ st }}</span>
+          </td>
+          <td class="mono faint">{{ a.get('vm_instance_id') or '-' }}</td>
+          <td>{{ a.get('guest_cid') or '-' }}</td>
+          <td class="faint">{{ a.get('last_error') or '-' }}</td>
+          <td>
+            <div class="btn-row">
+              <form method="post" action="{{ prefix }}/agents/{{ a.get('id') }}/launch"><button class="btn sm primary" type="submit">Launch</button></form>
+              <form method="post" action="{{ prefix }}/agents/{{ a.get('id') }}/stop"><button class="btn sm" type="submit">Stop</button></form>
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="empty">No agents registered</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="section" id="create-agent">
+  <h2>Create Agent <span class="badge edit">edit</span></h2>
+  <div class="card">
+    <form method="post" action="{{ prefix }}/agents/create">
+      <div class="form-row">
+        <div class="field">
+          <label for="agent_id">Agent ID</label>
+          <input id="agent_id" name="agent_id" required placeholder="research-agent-01">
+        </div>
+        <div class="field">
+          <label>Resource Limits</label>
+          <div class="form-row">
+            <input name="memory_mb" type="number" value="512" title="memory_mb">
+            <input name="vcpu_count" type="number" value="1" title="vcpu_count">
+          </div>
+          <div class="help">memory_mb · vcpu_count</div>
+        </div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field">
+          <label for="tools">Engine 1 Tools</label>
+          <select id="tools" name="tools" multiple>
+            {% for t in tools %}<option value="{{ t.get('name') }}">{{ t.get('name') }} ({{ t.get('risk_level') }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="skills">Skills</label>
+          <select id="skills" name="skills" multiple>
+            {% for s in skills %}<option value="{{ s.get('name') }}">{{ s.get('name') }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="namespaces">Engine 4 Namespaces</label>
+          <select id="namespaces" name="namespaces" multiple>
+            {% for n in namespaces %}<option value="{{ n.get('name') }}" {% if n.get('name') == 'private' %}selected{% endif %}>{{ n.get('name') }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="allowed_providers">Engine 3 Allowed Providers</label>
+          <select id="allowed_providers" name="allowed_providers" multiple>
+            {% for p in providers %}<option value="{{ p.get('provider_id') }}" {% if p.get('provider_id') == 'stub' %}selected{% endif %}>{{ p.get('provider_id') }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="allowed_models">Engine 3 Allowed Models</label>
+          <input id="allowed_models" name="allowed_models" placeholder="stub-v1, gpt-4o">
+          <div class="help">Comma-separated. Empty selection = default chat-only manifest.</div>
+        </div>
+      </div>
+      <button class="btn primary" type="submit">Create Agent</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

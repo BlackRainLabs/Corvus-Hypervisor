@@ -1,0 +1,24 @@
+services:
+  corvus-server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "${CORVUS_TCP_PORT:-4040}:4040"
+      - "${CORVUS_MGMT_PORT:-8080}:8080"
+    environment:
+      CORVUS_USE_TCP: "1"
+      CORVUS_TCP_HOST: "0.0.0.0"
+      CORVUS_TCP_PORT: "4040"
+      CORVUS_MGMT_HOST: "0.0.0.0"
+      CORVUS_MGMT_PORT: "8080"
+      CORVUS_DB_PATH: /data/corvus.db
+      CORVUS_VM_STATE_DIR: /data/vms
+      CORVUS_API_KEY: ${CORVUS_API_KEY:-dev-api-key}
+      CORVUS_LOG_JSON: ${CORVUS_LOG_JSON:-0}
+    volumes:
+      - corvus-data:/data
+    restart: unless-stopped
+
+volumes:
+  corvus-data:

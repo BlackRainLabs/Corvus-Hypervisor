@@ -1,0 +1,24 @@
+providers:
+  openai:
+    api_base_url: https://api.openai.com/v1
+    credential_ref: env:OPENAI_API_KEY
+    supported_models:
+      - gpt-4
+      - gpt-4o
+      - gpt-4.1
+    hosted_tools_allowed: false
+    allowed_hosted_tools: []
+  stub:
+    api_base_url: stub://local
+    credential_ref: none
+    supported_models:
+      - stub-v1
+    hosted_tools_allowed: false
+    allowed_hosted_tools: []
+  dummy-http:
+    api_base_url: http://127.0.0.1:8765/v1
+    credential_ref: none
+    supported_models:
+      - dummy-v1
+    hosted_tools_allowed: false
+    allowed_hosted_tools: []

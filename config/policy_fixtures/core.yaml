@@ -1,0 +1,177 @@
+# RBAC policy regression fixtures — run via: corvus-policy-fixtures
+fixtures:
+  - id: allow-user-query-researcher
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine2
+      type: user_query
+      tags:
+        triggered_by: user_input
+      payload:
+        user_id: test-user
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+    expect:
+      decision: allow
+      matched_rule_ids:
+        - allow-user-query
+
+  - id: deny-engine3-memory
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine3
+      type: memory:query
+      tags:
+        triggered_by: agent_initiated
+      payload: {}
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+    expect:
+      decision: deny
+      effective_error_code: SERVER_RBAC_DENIED
+      matched_rule_ids:
+        - deny-engine3-memory
+
+  - id: allow-llm-request
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine3
+      type: llm_request
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        provider: openai
+        model: gpt-4
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+    expect:
+      decision: allow
+      matched_rule_ids:
+        - allow-llm-request
+
+  - id: allow-engine4-memory-with-grant-override
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine4
+      type: memory:query
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        target_agent_id: other-agent
+        namespace: private
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+      has_valid_grant: true
+    expect:
+      decision: allow
+      matched_rule_ids:
+        - allow-engine4-memory-with-grant
+
+  - id: elevate-cross-agent-memory-without-grant
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine4
+      type: memory:query
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        target_agent_id: other-agent
+        namespace: private
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+      has_valid_grant: false
+    expect:
+      decision: elevate
+
+  - id: elevate-dangerous-tool-call
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine1
+      type: tool_call
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        tool_name: shell
+        command: rm -rf /tmp/example
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+    expect:
+      decision: elevate
+      matched_rule_ids:
+        - elevate-dangerous-tool-call
+
+  - id: deny-repeated-grant-denials-behavioral
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine4
+      type: memory:query
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        target_agent_id: other-agent
+        namespace: private
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+      has_valid_grant: false
+      behavioral_signals:
+        repeated_grant_denials: 4
+    expect:
+      decision: deny
+      effective_error_code: SERVER_RBAC_DENIED
+      matched_rule_ids:
+        - deny-repeated-grant-denials
+
+  - id: elevate-message-rate-anomaly
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine2
+      type: ping
+      tags:
+        triggered_by: agent_initiated
+      payload: {}
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+      behavioral_signals:
+        message_rate_anomaly: 4.5
+    expect:
+      decision: elevate
+      matched_rule_ids:
+        - elevate-message-rate-anomaly
+
+  - id: elevate-tool-pattern-deviation
+    message:
+      source:
+        agent_id: test-agent-01
+        engine: engine1
+      type: tool_call
+      tags:
+        triggered_by: agent_initiated
+      payload:
+        tool_name: echo
+        arguments:
+          text: hi
+    context:
+      user_id: test-user
+      correlation_chain_valid: true
+      behavioral_signals:
+        tool_pattern_deviation: true
+    expect:
+      decision: elevate
+      matched_rule_ids:
+        - elevate-tool-pattern-deviation
