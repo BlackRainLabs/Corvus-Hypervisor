@@ -16,11 +16,6 @@ from corvus.policy.grants import GrantEngine
 from corvus.policy.identity import IdentityResolver
 from corvus.policy.quota import QuotaService
 from corvus.policy.rules import RuleStore
-from corvus.server.settings_store import (
-    apply_settings_to_context,
-    ensure_settings_seeded,
-    load_settings_into_config,
-)
 from corvus.server.catalog_store import CatalogStore
 from corvus.server.config import ServerConfig, load_config
 from corvus.server.correlation import CorrelationStore
@@ -36,6 +31,11 @@ from corvus.server.manifest import (
 from corvus.server.pending_replay import PendingReplayQueue
 from corvus.server.router import MessageRouter
 from corvus.server.session import SessionManager
+from corvus.server.settings_store import (
+    apply_settings_to_context,
+    ensure_settings_seeded,
+    load_settings_into_config,
+)
 from corvus.server.transport import AgentTransport
 from corvus.tools.service import ToolGatewayService
 

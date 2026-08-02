@@ -252,7 +252,10 @@ async def test_user_create_and_detail(app_ctx):
                 "role": "operator",
                 "groups": "research, ops",
                 "pin": "4321",
-                "aliases_json": '[{"platform":"cli","value":"ui-user","verified":true,"auth_method":"alias"}]',
+                "aliases_json": (
+                    '[{"platform":"cli","value":"ui-user",'
+                    '"verified":true,"auth_method":"alias"}]'
+                ),
             },
         )
         assert created.status_code == 303
@@ -357,7 +360,11 @@ async def test_groups_panel_and_catalog_forms_render(app_ctx):
         tools = await client.get("/ui/tools")
         assert tools.status_code == 200
         assert "/tools/catalog/tools" in tools.text
-        assert "Save tool" in tools.text or "Create tool" in tools.text or 'name="entrypoint"' in tools.text
+        assert (
+            "Save tool" in tools.text
+            or "Create tool" in tools.text
+            or 'name="entrypoint"' in tools.text
+        )
 
         security = await client.get("/ui/security")
         assert security.status_code == 200

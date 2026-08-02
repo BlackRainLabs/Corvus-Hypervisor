@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import replace
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from corvus.server.config import ServerConfig
 from corvus.server.db import Database

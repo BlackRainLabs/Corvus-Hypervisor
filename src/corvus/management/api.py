@@ -24,12 +24,6 @@ from corvus.protocol import (
 )
 from corvus.server.bootstrap import AppContext
 from corvus.server.db import hash_secret
-from corvus.server.settings_store import (
-    SETTINGS_SPEC,
-    apply_settings_to_context,
-    load_settings_into_config,
-    settings_public_view,
-)
 from corvus.server.manifest import (
     AgentManifest,
     canonical_manifest,
@@ -37,6 +31,12 @@ from corvus.server.manifest import (
     resolve_manifest,
 )
 from corvus.server.metrics import render_prometheus_metrics_for_context
+from corvus.server.settings_store import (
+    SETTINGS_SPEC,
+    apply_settings_to_context,
+    load_settings_into_config,
+    settings_public_view,
+)
 from corvus.vm.launcher import VMLauncher
 from corvus.vm.registry import VMRecord
 
@@ -493,7 +493,10 @@ def create_app(ctx: AppContext) -> FastAPI:
                         status_code=409,
                         detail=_error(
                             "AGENT_PATCH_REQUIRES_STOP",
-                            "Stop the agent VM before changing engines, workspaces, skills, or rootfs",
+                            (
+                                "Stop the agent VM before changing engines, "
+                                "workspaces, skills, or rootfs"
+                            ),
                             {"field": key, "status": active_vm.status},
                         ),
                     )

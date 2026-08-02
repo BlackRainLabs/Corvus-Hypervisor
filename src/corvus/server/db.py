@@ -389,7 +389,11 @@ class Database:
 
     async def list_groups(self) -> list[dict[str, Any]]:
         cursor = await self.conn.execute(
-            "SELECT id, parent_group, inherited_rules, rule_ids_json, members_json, created_at, updated_at FROM groups ORDER BY id"
+            """
+            SELECT id, parent_group, inherited_rules, rule_ids_json, members_json,
+                   created_at, updated_at
+            FROM groups ORDER BY id
+            """
         )
         rows = await cursor.fetchall()
         return [
@@ -407,7 +411,11 @@ class Database:
 
     async def get_group(self, group_id: str) -> dict[str, Any] | None:
         cursor = await self.conn.execute(
-            "SELECT id, parent_group, inherited_rules, rule_ids_json, members_json, created_at, updated_at FROM groups WHERE id = ?",
+            """
+            SELECT id, parent_group, inherited_rules, rule_ids_json, members_json,
+                   created_at, updated_at
+            FROM groups WHERE id = ?
+            """,
             (group_id,),
         )
         row = await cursor.fetchone()
@@ -439,7 +447,10 @@ class Database:
         if existing is None:
             await self.conn.execute(
                 """
-                INSERT INTO groups (id, parent_group, inherited_rules, rule_ids_json, members_json, created_at, updated_at)
+                INSERT INTO groups (
+                    id, parent_group, inherited_rules, rule_ids_json,
+                    members_json, created_at, updated_at
+                )
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
@@ -455,7 +466,9 @@ class Database:
         else:
             await self.conn.execute(
                 """
-                UPDATE groups SET parent_group=?, inherited_rules=?, rule_ids_json=?, members_json=?, updated_at=?
+                UPDATE groups
+                SET parent_group=?, inherited_rules=?, rule_ids_json=?,
+                    members_json=?, updated_at=?
                 WHERE id=?
                 """,
                 (
@@ -523,7 +536,10 @@ class Database:
 
     async def get_setting(self, key: str) -> dict[str, Any] | None:
         cursor = await self.conn.execute(
-            "SELECT key, value_json, secret, restart_required, updated_at FROM server_settings WHERE key = ?",
+            """
+            SELECT key, value_json, secret, restart_required, updated_at
+            FROM server_settings WHERE key = ?
+            """,
             (key,),
         )
         row = await cursor.fetchone()
@@ -539,7 +555,10 @@ class Database:
 
     async def list_settings(self) -> list[dict[str, Any]]:
         cursor = await self.conn.execute(
-            "SELECT key, value_json, secret, restart_required, updated_at FROM server_settings ORDER BY key"
+            """
+            SELECT key, value_json, secret, restart_required, updated_at
+            FROM server_settings ORDER BY key
+            """
         )
         rows = await cursor.fetchall()
         return [
