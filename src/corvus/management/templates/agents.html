@@ -90,6 +90,49 @@
           <div class="help">Comma-separated. Empty selection = default chat-only manifest.</div>
         </div>
       </div>
+      <div class="form-row cols-3">
+        <div class="field">
+          <label for="platforms">Engine 2 Platforms</label>
+          <input id="platforms" name="platforms" value="api" placeholder="api, whatsapp">
+          <div class="help">Comma-separated channel platforms</div>
+        </div>
+        <div class="field">
+          <label for="tool_execution_mode">Tool execution mode</label>
+          <select id="tool_execution_mode" name="tool_execution_mode">
+            <option value="local" selected>local</option>
+            <option value="hybrid">hybrid</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="provider_tools">Provider tools (hybrid)</label>
+          <input id="provider_tools" name="provider_tools" placeholder="openai:web_search">
+          <div class="help">Comma-separated; requires hybrid mode</div>
+        </div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field">
+          <label for="workspaces">Workspaces</label>
+          <select id="workspaces" name="workspaces" multiple>
+            {% for w in workspaces %}<option value="{{ w.get('id') }}" {% if w.get('id') == 'default' %}selected{% endif %}>{{ w.get('id') }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="rootfs_image">Rootfs image</label>
+          <input id="rootfs_image" name="rootfs_image" value="corvus-test-rootfs">
+        </div>
+        <div class="field">
+          <label for="namespace_permissions">Namespace permissions</label>
+          <input id="namespace_permissions" name="namespace_permissions" value="read,write" placeholder="read,write,delete">
+          <div class="help">Applied to selected Engine 4 namespaces via launch_grants (self)</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="launch_grants_json">Launch grants (JSON array, optional)</label>
+          <textarea id="launch_grants_json" name="launch_grants_json" rows="3" placeholder='[{"target_agent":"peer","namespace":"shared-knowledge","permissions":["read"]}]'></textarea>
+          <div class="help">Additional cross-agent grants; self-namespace grants are derived from namespaces + permissions above when this is empty</div>
+        </div>
+      </div>
       <button class="btn primary" type="submit">Create Agent</button>
     </form>
   </div>

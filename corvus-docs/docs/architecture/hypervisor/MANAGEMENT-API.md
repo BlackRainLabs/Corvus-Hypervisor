@@ -2,8 +2,8 @@
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-12
-**Related Documents:** OVERVIEW.md, hypervisor/RBAC-POLICY.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, memory/ARCHITECTURE.md, CHANGES.md
+**Last Updated:** 2026-08-02
+**Related Documents:** OVERVIEW.md, hypervisor/RBAC-POLICY.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, memory/ARCHITECTURE.md, ../../planning/OPERATIONS.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.
 **API Caution:** Any changes must consider impact on the Management API surface. Maintain backward compatibility where possible and document breaking changes.
@@ -12,7 +12,7 @@
 
 ## Purpose
 
-The Management API provides a clean, external interface for configuring and monitoring Corvus. It supports future GUI, CLI, and automation tools without tight coupling to internal implementation.
+The Management API provides a clean, external interface for configuring and monitoring Corvus. It is the backing surface for the Operator Console, CLI, and automation tools without tight coupling to internal implementation.
 
 ## Design Principles
 
@@ -22,6 +22,7 @@ The Management API provides a clean, external interface for configuring and moni
 - Role-based access to the API itself (admin vs operator)
 - Declarative configuration where possible
 - Backward compatibility priority
+- **Phase 9:** mutable control-plane state is writable via API/GUI; catalogs and runtime settings are SQLite-backed (env/YAML = bootstrap + break-glass)
 
 ## Authentication
 
@@ -36,16 +37,18 @@ The Management API provides a clean, external interface for configuring and moni
 - `GET /v1/catalog/skills` — List server-owned skill catalog entries
 - `GET /v1/catalog/llm-providers` — List approved LLM providers, supported models, and hosted-tool flags (`hosted_tools_allowed`, `allowed_hosted_tools`; no secrets)
 - `GET /v1/catalog/workspaces` — List approved workspace mounts and memory namespace templates
+- `POST` / `PUT` / `DELETE` under `/v1/catalog/{tools,skills,workspaces,memory-namespaces,llm_providers}` — catalog CRUD (SQLite-backed; seeded from `DEFAULT_CATALOG` / YAML providers on first boot)
+- LLM provider writes reload `LlmProviderRegistry` in-process (no restart); `credential_ref` / `api_base_url` are never returned on GET
 
 Agent manifests select catalog IDs. The Corvus Server resolves those selections before persistence and VM launch; VM-provided capability strings are never authoritative.
 
 ### Users & Profiles
 
 - `GET /v1/users` — List users
-- `POST /v1/users` — Create user profile
+- `POST /v1/users` — Create or upsert user profile
 - `GET /v1/users/{id}` — Get profile
-- `PATCH /v1/users/{id}` — Update aliases, roles, contacts, groups
-- `DELETE /v1/users/{id}` — Deactivate user
+- `PATCH /v1/users/{id}` — Update aliases, roles, contacts, groups, active flag
+- `DELETE /v1/users/{id}` — Deactivate user (`active: false`)
 
 **POST /v1/users request:**
 
@@ -75,6 +78,7 @@ user:
 - `GET /v1/groups` — List groups
 - `POST /v1/groups` — Create group
 - `PATCH /v1/groups/{id}` — Update members and assigned rules
+- `DELETE /v1/groups/{id}` — Delete group
 - `POST /v1/groups/{id}/members` — Add user to group
 
 **POST /v1/groups request:**
@@ -92,7 +96,7 @@ group:
 
 - `GET /v1/agents` — List agents and status
 - `POST /v1/agents` — Create agent with manifest
-- `PATCH /v1/agents/{id}` — Update runtime config (not baked capabilities)
+- `PATCH /v1/agents/{id}` — Update manifest / runtime config; re-hash; reject unsafe mid-flight engine/rootfs/workspace/skills changes while VMs running
 - `GET /v1/agents/{id}/manifest` — Get launch manifest
 - `GET /v1/agents/{id}/vms` — List VM lifecycle records for an agent
 - `POST /v1/agents/{id}/launch` — Launch an agent microVM from its resolved manifest
@@ -239,12 +243,19 @@ namespace:
 
 ### Bus & Audit
 
-- `GET /v1/bus/traffic` — Live or historical bus inspection
+- `GET /v1/bus/traffic` — Live or historical bus inspection (not yet implemented)
 - `GET /v1/audit/logs` — Query audit trail
 
-**GET /v1/audit/logs query params:** `correlation_id`, `origin_correlation_id`, `agent_id`, `from`, `to`, `operation`, `limit`
+**GET /v1/audit/logs query params:** `correlation_id`, `origin_correlation_id`, `agent_id`, `from` (alias of `from_`), `to`, `limit`
 
 RBAC audit filters also support `user_id`, `event_type`, `rule_id`, `grant_id`, and `elevation_id`.
+
+### Runtime Settings
+
+- `GET /v1/settings` — Grouped runtime settings (secrets redacted)
+- `PATCH /v1/settings` — Update settings; secrets are write-only replace; non-restart knobs apply in-process
+- Bind host/port/transport (`mgmt_host`, `mgmt_port`, `use_tcp`) are editable but **restart_required** (operator restarts `corvus-server`; UI does not auto-kill)
+- Precedence: empty DB ← seed from `load_config()`; non-empty DB is source of truth; **env wins if explicitly set** (break-glass)
 
 ### Health & Metrics
 
@@ -312,8 +323,9 @@ error:
 
 ## Operator Console (GUI)
 
-- A server-rendered operator console is mounted on the same app at `/ui` (Phase 8; see [OPERATIONS.md](../../planning/OPERATIONS.md)).
+- A server-rendered operator console is mounted on the same app at `/ui` (Phase 8+; see [OPERATIONS.md](../../planning/OPERATIONS.md)).
 - It is a presentation layer only: every console action calls these same `/v1` endpoints in-process (httpx `ASGITransport` with the server-held API key), so validation and audit are identical to direct API use.
+- Phase 9 makes catalogs, settings, providers, and day-2 agent/user/group surfaces editable; health tiles, Prometheus dump, audit bodies, and resolved manifest JSON remain informational. Secrets are write-only after set.
 - Sign-in uses the Management API key and sets a signed HttpOnly session cookie. Configurable via `CORVUS_UI_ENABLED`, `CORVUS_UI_SESSION_SECRET`, `CORVUS_UI_PATH_PREFIX`. Assets (HTMX, Alpine.js) are vendored — no external network required.
 
 ## Rate limiting

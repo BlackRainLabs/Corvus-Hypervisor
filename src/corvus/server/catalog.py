@@ -29,6 +29,7 @@ class LLMProviderCatalogEntry(BaseModel):
     provider_id: str
     supported_models: list[str]
     credential_ref: str
+    api_base_url: str = "stub://local"
     quota_class: str = "dev"
     hosted_tools_allowed: bool = False
     allowed_hosted_tools: list[str] = Field(default_factory=list)
@@ -119,18 +120,21 @@ DEFAULT_CATALOG = CapabilityCatalog(
             provider_id="openai",
             supported_models=["gpt-4", "gpt-4o", "gpt-4.1"],
             credential_ref="env:OPENAI_API_KEY",
+            api_base_url="https://api.openai.com/v1",
             quota_class="dev",
         ),
         "stub": LLMProviderCatalogEntry(
             provider_id="stub",
             supported_models=["stub-v1"],
             credential_ref="none",
+            api_base_url="stub://local",
             quota_class="dev",
         ),
         "dummy-http": LLMProviderCatalogEntry(
             provider_id="dummy-http",
             supported_models=["dummy-v1"],
             credential_ref="none",
+            api_base_url="http://127.0.0.1:8765/v1",
             quota_class="dev",
         ),
     },

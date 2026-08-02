@@ -210,6 +210,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             skills=catalog_skills.get("skills", []),
             providers=catalog_providers.get("llm_providers", []),
             namespaces=catalog_ws.get("memory_namespaces", []),
+            workspaces=catalog_ws.get("workspaces", []),
         )
 
     @router.get("/agents/{agent_id}", response_class=HTMLResponse)
@@ -241,6 +242,13 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         allowed_providers: list[str] = Form(default=[]),
         allowed_models: str = Form(default=""),
         namespaces: list[str] = Form(default=[]),
+        platforms: str = Form(default="api"),
+        tool_execution_mode: str = Form(default="local"),
+        provider_tools: str = Form(default=""),
+        workspaces: list[str] = Form(default=[]),
+        rootfs_image: str = Form(default="corvus-test-rootfs"),
+        namespace_permissions: str = Form(default="read,write"),
+        launch_grants_json: str = Form(default=""),
         memory_mb: int = Form(default=512),
         vcpu_count: int = Form(default=1),
     ) -> RedirectResponse:
@@ -248,16 +256,41 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         engines: dict[str, Any] = {}
         if tools:
             engines["engine1"] = {"tools": tools}
-        if allowed_providers or allowed_models:
-            engines["engine3"] = {
-                "allowed_providers": allowed_providers,
-                "allowed_models": _split_csv(allowed_models),
+        platform_list = _split_csv(platforms) or ["api"]
+        engines["engine2"] = {"platforms": platform_list}
+        if allowed_providers or allowed_models or tool_execution_mode or provider_tools:
+            engine3: dict[str, Any] = {
+                "allowed_providers": allowed_providers or ["stub"],
+                "allowed_models": _split_csv(allowed_models) or ["stub-v1"],
+                "tool_execution_mode": tool_execution_mode or "local",
+                "provider_tools": _split_csv(provider_tools),
             }
+            engines["engine3"] = engine3
         if namespaces:
             engines["engine4"] = {"namespaces": namespaces}
         manifest: dict[str, Any] = {"manifest_version": "1.0", "engines": engines}
         if skills:
             manifest["skills"] = skills
+        if workspaces:
+            manifest["workspaces"] = [
+                {"workspace_id": wid, "mount_path": "/workspace", "mode": "rw"}
+                for wid in workspaces
+            ]
+        if rootfs_image:
+            manifest["rootfs_image"] = rootfs_image
+        launch_grants: list[dict[str, Any]] = []
+        if launch_grants_json.strip():
+            try:
+                parsed = json.loads(launch_grants_json)
+                if not isinstance(parsed, list):
+                    return redirect("/agents", err="launch_grants_json must be a JSON array")
+                launch_grants = parsed
+            except json.JSONDecodeError:
+                return redirect("/agents", err="Invalid launch_grants_json")
+        if launch_grants:
+            manifest["launch_grants"] = launch_grants
+        # namespace_permissions is reserved for day-2 docs/UI hint; namespaces list is authoritative
+        _ = namespace_permissions
         manifest["resource_limits"] = {"memory_mb": memory_mb, "vcpu_count": vcpu_count}
         ok, data, _ = await api.call(
             "POST", "/v1/agents", json={"id": agent_id, "manifest": manifest}
@@ -304,6 +337,24 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             return redirect(f"/agents/{agent_id}", err=_error_text(data, "Quota update failed"))
         return redirect(f"/agents/{agent_id}", msg=f"Namespace {namespace} updated")
 
+    @router.post("/agents/{agent_id}/patch")
+    async def agent_patch(
+        request: Request,
+        agent_id: str,
+        manifest_json: str = Form(...),
+    ) -> RedirectResponse:
+        require_session(request)
+        try:
+            manifest = json.loads(manifest_json)
+        except json.JSONDecodeError:
+            return redirect(f"/agents/{agent_id}", err="Invalid manifest JSON")
+        ok, data, _ = await api.call(
+            "PATCH", f"/v1/agents/{agent_id}", json={"manifest": manifest}
+        )
+        if not ok:
+            return redirect(f"/agents/{agent_id}", err=_error_text(data, "Patch failed"))
+        return redirect(f"/agents/{agent_id}", msg="Manifest updated")
+
     # ---- Tools & Skills ---------------------------------------------------
     @router.get("/tools", response_class=HTMLResponse)
     async def tools_page(request: Request) -> HTMLResponse:
@@ -320,6 +371,87 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             workspaces=ws.get("workspaces", []),
         )
 
+    @router.post("/tools/catalog/{kind}")
+    async def catalog_upsert_form(
+        request: Request,
+        kind: str,
+        name: str = Form(default=""),
+        id: str = Form(default=""),
+        version: str = Form(default="1.0"),
+        entrypoint: str = Form(default=""),
+        package_source: str = Form(default="builtin"),
+        permissions: str = Form(default=""),
+        risk_level: str = Form(default="low"),
+        runtime_dependencies: str = Form(default=""),
+        exposed_tool_schemas: str = Form(default=""),
+        source: str = Form(default=""),
+        mount_path: str = Form(default="/workspace"),
+        mount_mode: str = Form(default="ro"),
+        allowed_agents: str = Form(default="*"),
+        retention_policy: str = Form(default="ephemeral"),
+    ) -> RedirectResponse:
+        require_session(request)
+        dest = "/tools"
+        if kind == "tools":
+            body = {
+                "name": name,
+                "version": version,
+                "entrypoint": entrypoint,
+                "package_source": package_source,
+                "permissions": _split_csv(permissions),
+                "risk_level": risk_level,
+                "required_files": [],
+            }
+        elif kind == "skills":
+            body = {
+                "name": name,
+                "version": version,
+                "package_source": package_source,
+                "runtime_dependencies": _split_csv(runtime_dependencies),
+                "exposed_tool_schemas": _split_csv(exposed_tool_schemas),
+            }
+        elif kind == "workspaces":
+            body = {
+                "id": id,
+                "source": source,
+                "mount_path": mount_path,
+                "mount_mode": mount_mode,
+                "allowed_agents": _split_csv(allowed_agents) or ["*"],
+                "retention_policy": retention_policy,
+            }
+        elif kind == "memory-namespaces":
+            dest = "/memory"
+            body = {
+                "name": name,
+                "retention_policy": retention_policy or "agent-private",
+                "quota": {
+                    "max_records": 1000,
+                    "max_record_bytes": 65536,
+                    "default_ttl_seconds": None,
+                },
+            }
+            kind = "memory_namespaces"
+        else:
+            return redirect("/tools", err="Unknown catalog kind")
+        ok, data, _ = await api.call("POST", f"/v1/catalog/{kind}", json=body)
+        if not ok:
+            return redirect(dest, err=_error_text(data, "Catalog save failed"))
+        return redirect(dest, msg="Catalog entry saved")
+
+    @router.post("/tools/catalog/{kind}/{entry_id}/delete")
+    async def catalog_delete_form(
+        request: Request, kind: str, entry_id: str
+    ) -> RedirectResponse:
+        require_session(request)
+        api_kind = "memory_namespaces" if kind == "memory-namespaces" else kind
+        dest = "/memory" if api_kind == "memory_namespaces" else "/tools"
+        if api_kind == "llm_providers":
+            dest = "/inference"
+        ok, data, _ = await api.call("DELETE", f"/v1/catalog/{api_kind}/{entry_id}")
+        if not ok:
+            return redirect(dest, err=_error_text(data, "Delete failed"))
+        return redirect(dest, msg="Catalog entry deleted")
+
     # ---- Inference --------------------------------------------------------
     @router.get("/inference", response_class=HTMLResponse)
     async def inference_page(request: Request) -> HTMLResponse:
@@ -329,20 +461,97 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         token_quotas = [
             q for q in quotas.get("quotas", []) if "llm_tokens" in str(q.get("key", ""))
         ]
-        settings = {
-            "default_provider": config.llm_default_provider,
-            "request_timeout_seconds": config.llm_request_timeout_seconds,
-            "tokens_daily_limit": config.llm_tokens_daily_limit,
-            "providers_path": str(config.llm_providers_path),
-        }
+        settings_resp = await api.get("/v1/settings")
+        inference_settings = settings_resp.get("settings", {}).get("inference", [])
         return render(
             request,
             "inference.html",
             "inference",
             providers=providers.get("llm_providers", []),
             token_quotas=token_quotas,
-            settings=settings,
+            settings={
+                "default_provider": next(
+                    (s["value"] for s in inference_settings if s["key"] == "llm_default_provider"),
+                    config.llm_default_provider,
+                ),
+                "request_timeout_seconds": next(
+                    (
+                        s["value"]
+                        for s in inference_settings
+                        if s["key"] == "llm_request_timeout_seconds"
+                    ),
+                    config.llm_request_timeout_seconds,
+                ),
+                "tokens_daily_limit": next(
+                    (
+                        s["value"]
+                        for s in inference_settings
+                        if s["key"] == "llm_tokens_daily_limit"
+                    ),
+                    config.llm_tokens_daily_limit,
+                ),
+                "providers_path": str(config.llm_providers_path),
+            },
+            inference_settings=inference_settings,
         )
+
+    @router.post("/inference/providers")
+    async def inference_provider_save(
+        request: Request,
+        provider_id: str = Form(...),
+        api_base_url: str = Form(default="stub://local"),
+        supported_models: str = Form(default=""),
+        credential_ref: str = Form(default="none"),
+        hosted_tools_allowed: str = Form(default="0"),
+        allowed_hosted_tools: str = Form(default=""),
+    ) -> RedirectResponse:
+        require_session(request)
+        body = {
+            "provider_id": provider_id,
+            "api_base_url": api_base_url,
+            "supported_models": _split_csv(supported_models),
+            "credential_ref": credential_ref,
+            "quota_class": "dev",
+            "hosted_tools_allowed": hosted_tools_allowed == "1",
+            "allowed_hosted_tools": _split_csv(allowed_hosted_tools),
+        }
+        ok, data, _ = await api.call(
+            "PUT", f"/v1/catalog/llm_providers/{provider_id}", json=body
+        )
+        if not ok:
+            return redirect("/inference", err=_error_text(data, "Provider save failed"))
+        return redirect("/inference", msg=f"Provider {provider_id} saved")
+
+    @router.post("/settings/patch")
+    async def settings_patch(request: Request) -> RedirectResponse:
+        require_session(request)
+        form = await request.form()
+        return_to = str(form.get("return_to") or "/system")
+        if not return_to.startswith("/"):
+            return_to = "/system"
+        updates: dict[str, Any] = {}
+        for key, value in form.items():
+            if key in {"return_to"} or not str(key).startswith("setting_"):
+                continue
+            setting_key = str(key)[len("setting_") :]
+            raw = str(value)
+            if raw in {"true", "false"}:
+                updates[setting_key] = raw == "true"
+            else:
+                try:
+                    if raw.isdigit() or (raw.startswith("-") and raw[1:].isdigit()):
+                        updates[setting_key] = int(raw)
+                    else:
+                        updates[setting_key] = float(raw) if "." in raw else raw
+                except ValueError:
+                    updates[setting_key] = raw
+        ok, data, _ = await api.call("PATCH", "/v1/settings", json={"settings": updates})
+        if not ok:
+            return redirect(return_to, err=_error_text(data, "Settings update failed"))
+        msg = "Settings updated"
+        if isinstance(data, dict) and data.get("restart_required"):
+            msg += f" (restart required: {', '.join(data['restart_required'])})"
+        return redirect(return_to, msg=msg)
 
     # ---- Memory -----------------------------------------------------------
     @router.get("/memory", response_class=HTMLResponse)
@@ -351,11 +560,41 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         ws = await api.get("/v1/catalog/workspaces")
         health = await api.get("/v1/health")
         server = health.get("server", {})
+        settings_resp = await api.get("/v1/settings")
+        memory_settings = settings_resp.get("settings", {}).get("memory", [])
         settings = {
-            "encryption_enabled": config.memory_encryption_enabled,
-            "sweep_interval_seconds": config.memory_sweep_interval_seconds,
-            "soft_delete_retention_hours": config.memory_soft_delete_retention_hours,
-            "writes_daily_limit": config.memory_writes_daily_limit,
+            "encryption_enabled": next(
+                (
+                    s["value"]
+                    for s in memory_settings
+                    if s["key"] == "memory_encryption_enabled"
+                ),
+                config.memory_encryption_enabled,
+            ),
+            "sweep_interval_seconds": next(
+                (
+                    s["value"]
+                    for s in memory_settings
+                    if s["key"] == "memory_sweep_interval_seconds"
+                ),
+                config.memory_sweep_interval_seconds,
+            ),
+            "soft_delete_retention_hours": next(
+                (
+                    s["value"]
+                    for s in memory_settings
+                    if s["key"] == "memory_soft_delete_retention_hours"
+                ),
+                config.memory_soft_delete_retention_hours,
+            ),
+            "writes_daily_limit": next(
+                (
+                    s["value"]
+                    for s in memory_settings
+                    if s["key"] == "memory_writes_daily_limit"
+                ),
+                config.memory_writes_daily_limit,
+            ),
             "sweeper_running": server.get("memory_sweeper_running"),
         }
         return render(
@@ -364,6 +603,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             "memory",
             namespaces=ws.get("memory_namespaces", []),
             settings=settings,
+            memory_settings=memory_settings,
         )
 
     # ---- Users & Access ---------------------------------------------------
@@ -371,7 +611,14 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
     async def users_page(request: Request) -> HTMLResponse:
         require_session(request)
         users = await api.get("/v1/users")
-        return render(request, "users.html", "users", users=users.get("users", []))
+        groups = await api.get("/v1/groups")
+        return render(
+            request,
+            "users.html",
+            "users",
+            users=users.get("users", []),
+            groups=groups.get("groups", []),
+        )
 
     @router.get("/users/{user_id}", response_class=HTMLResponse)
     async def user_detail(request: Request, user_id: str) -> HTMLResponse:
@@ -395,8 +642,10 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         groups: str = Form(default=""),
         privileges: str = Form(default=""),
         allowed_agents: str = Form(default=""),
+        aliases_json: str = Form(default=""),
         pin: str = Form(default=""),
         password: str = Form(default=""),
+        return_to: str = Form(default=""),
     ) -> RedirectResponse:
         require_session(request)
         payload: dict[str, Any] = {
@@ -406,14 +655,63 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             "privileges": _split_csv(privileges),
             "allowed_agents": _split_csv(allowed_agents),
         }
+        if aliases_json.strip():
+            try:
+                aliases = json.loads(aliases_json)
+                if not isinstance(aliases, list):
+                    dest = return_to or "/users"
+                    return redirect(dest, err="aliases_json must be a JSON array")
+                payload["aliases"] = aliases
+            except json.JSONDecodeError:
+                dest = return_to or "/users"
+                return redirect(dest, err="Invalid aliases_json")
         if pin:
             payload["pin"] = pin
         if password:
             payload["password"] = password
         ok, data, _ = await api.call("POST", "/v1/users", json=payload)
+        dest = return_to or "/users"
         if not ok:
-            return redirect("/users", err=_error_text(data, "Create failed"))
-        return redirect("/users", msg=f"User {user_id} saved")
+            return redirect(dest, err=_error_text(data, "Create failed"))
+        return redirect(dest, msg=f"User {user_id} saved")
+
+    @router.post("/users/{user_id}/deactivate")
+    async def user_deactivate(request: Request, user_id: str) -> RedirectResponse:
+        require_session(request)
+        ok, data, _ = await api.call("DELETE", f"/v1/users/{user_id}")
+        if not ok:
+            return redirect("/users", err=_error_text(data, "Deactivate failed"))
+        return redirect("/users", msg=f"User {user_id} deactivated")
+
+    @router.post("/users/groups/create")
+    async def group_create(
+        request: Request,
+        group_id: str = Form(...),
+        parent_group: str = Form(default=""),
+        inherited_rules: str = Form(default="1"),
+        members: str = Form(default=""),
+        rule_ids: str = Form(default=""),
+    ) -> RedirectResponse:
+        require_session(request)
+        payload = {
+            "id": group_id,
+            "parent_group": parent_group or None,
+            "inherited_rules": inherited_rules != "0",
+            "members": _split_csv(members),
+            "rule_ids": _split_csv(rule_ids),
+        }
+        ok, data, _ = await api.call("POST", "/v1/groups", json=payload)
+        if not ok:
+            return redirect("/users", err=_error_text(data, "Group save failed"))
+        return redirect("/users", msg=f"Group {group_id} saved")
+
+    @router.post("/users/groups/{group_id}/delete")
+    async def group_delete(request: Request, group_id: str) -> RedirectResponse:
+        require_session(request)
+        ok, data, _ = await api.call("DELETE", f"/v1/groups/{group_id}")
+        if not ok:
+            return redirect("/users", err=_error_text(data, "Group delete failed"))
+        return redirect("/users", msg=f"Group {group_id} deleted")
 
     # ---- Security ---------------------------------------------------------
     @router.get("/security", response_class=HTMLResponse)
@@ -424,6 +722,19 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         elevations = await api.get("/v1/elevations")
         quotas = await api.get("/v1/quotas")
         users = await api.get("/v1/users")
+        settings_resp = await api.get("/v1/settings")
+        security_settings = settings_resp.get("settings", {}).get("security", [])
+        behavioral_keys = {
+            "behavioral_grant_denial_window_minutes",
+            "behavioral_grant_denial_threshold",
+            "behavioral_cross_agent_window_minutes",
+            "behavioral_cross_agent_threshold",
+            "behavioral_rate_baseline_minutes",
+            "behavioral_rate_zscore_threshold",
+            "behavioral_tool_zscore_threshold",
+            "behavioral_counter_retention_hours",
+        }
+        behavioral_settings = [s for s in security_settings if s["key"] in behavioral_keys]
         behavioral = {
             "grant_denial_window_minutes": config.behavioral_grant_denial_window_minutes,
             "grant_denial_threshold": config.behavioral_grant_denial_threshold,
@@ -434,6 +745,10 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             "tool_zscore_threshold": config.behavioral_tool_zscore_threshold,
             "counter_retention_hours": config.behavioral_counter_retention_hours,
         }
+        for row in behavioral_settings:
+            short = row["key"].removeprefix("behavioral_")
+            if short in behavioral:
+                behavioral[short] = row["value"]
         rules_list = rules.get("rules", [])
         return render(
             request,
@@ -446,6 +761,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             quotas=quotas.get("quotas", []),
             users=users.get("users", []),
             behavioral=behavioral,
+            behavioral_settings=behavioral_settings,
         )
 
     @router.post("/security/rules/create")
@@ -560,16 +876,18 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         limit: int = Form(...),
         used: int = Form(default=0),
         window_type: str = Form(default="daily"),
+        return_to: str = Form(default=""),
     ) -> RedirectResponse:
         require_session(request)
+        dest = return_to if return_to.startswith("/") else "/security"
         ok, data, _ = await api.call(
             "PATCH",
             f"/v1/quotas/{key}",
             json={"limit": limit, "used": used, "window_type": window_type},
         )
         if not ok:
-            return redirect("/security", err=_error_text(data, "Quota update failed"))
-        return redirect("/security", msg=f"Quota {key} updated")
+            return redirect(dest, err=_error_text(data, "Quota update failed"))
+        return redirect(dest, msg=f"Quota {key} updated")
 
     @router.post("/security/elevations/{elevation_id}/{action}")
     async def elevation_decision(
@@ -579,6 +897,11 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         approver_user_id: str = Form(...),
         pin: str = Form(default=""),
         password: str = Form(default=""),
+        grant_subject_agent: str = Form(default=""),
+        grant_target_agent: str = Form(default=""),
+        grant_namespace: str = Form(default=""),
+        grant_permissions: str = Form(default=""),
+        grant_expires_at: str = Form(default=""),
     ) -> RedirectResponse:
         require_session(request)
         if action not in {"approve", "deny"}:
@@ -588,6 +911,16 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             payload["pin"] = pin
         if password:
             payload["password"] = password
+        if action == "approve" and (
+            grant_subject_agent or grant_target_agent or grant_namespace
+        ):
+            payload["create_grant"] = {
+                "subject_agent": grant_subject_agent,
+                "target_agent": grant_target_agent,
+                "namespace": grant_namespace,
+                "permissions": _split_csv(grant_permissions) or ["read"],
+                "expires_at": grant_expires_at or None,
+            }
         ok, data, _ = await api.call(
             "POST", f"/v1/elevations/{elevation_id}/{action}", json=payload
         )
@@ -609,9 +942,11 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             "rule_id": qp.get("rule_id", ""),
             "grant_id": qp.get("grant_id", ""),
             "elevation_id": qp.get("elevation_id", ""),
+            "from": qp.get("from", ""),
+            "to": qp.get("to", ""),
             "limit": qp.get("limit", "100"),
         }
-        params = {**filters, "from_": qp.get("from_", ""), "to": qp.get("to", "")}
+        params = {**filters}
         logs = await api.get("/v1/audit/logs", params=params)
         return render(
             request,
@@ -630,6 +965,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         metrics_text = ""
         if isinstance(metrics_data, dict):
             metrics_text = metrics_data.get("raw", "")
+        settings_resp = await api.get("/v1/settings")
         return render(
             request,
             "system.html",
@@ -637,6 +973,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             health=health,
             metrics_text=metrics_text,
             config_rows=_config_view(config),
+            settings_groups=settings_resp.get("settings", {}),
         )
 
     app.include_router(router)

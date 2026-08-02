@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -23,8 +23,13 @@ from corvus.protocol import (
     TriggeredBy,
 )
 from corvus.server.bootstrap import AppContext
-from corvus.server.catalog import DEFAULT_CATALOG
 from corvus.server.db import hash_secret
+from corvus.server.settings_store import (
+    SETTINGS_SPEC,
+    apply_settings_to_context,
+    load_settings_into_config,
+    settings_public_view,
+)
 from corvus.server.manifest import (
     AgentManifest,
     canonical_manifest,
@@ -41,6 +46,10 @@ class AgentCreate(BaseModel):
     manifest: AgentManifest
 
 
+class AgentPatch(BaseModel):
+    manifest: AgentManifest
+
+
 RuleCreate = PolicyRule
 
 
@@ -53,6 +62,36 @@ class UserCreate(BaseModel):
     aliases: list[IdentityAlias] = Field(default_factory=list)
     pin: str | None = None
     password: str | None = None
+
+
+class UserPatch(BaseModel):
+    role: str | None = None
+    groups: list[str] | None = None
+    privileges: list[str] | None = None
+    allowed_agents: list[str] | None = None
+    aliases: list[IdentityAlias] | None = None
+    pin: str | None = None
+    password: str | None = None
+    active: bool | None = None
+
+
+class GroupCreate(BaseModel):
+    id: str
+    parent_group: str | None = None
+    inherited_rules: bool = True
+    rule_ids: list[str] = Field(default_factory=list)
+    members: list[str] = Field(default_factory=list)
+
+
+class GroupPatch(BaseModel):
+    parent_group: str | None = None
+    inherited_rules: bool | None = None
+    rule_ids: list[str] | None = None
+    members: list[str] | None = None
+
+
+class GroupMemberAdd(BaseModel):
+    user_id: str
 
 
 class GrantCreate(BaseModel):
@@ -179,7 +218,7 @@ def create_app(ctx: AppContext) -> FastAPI:
                 status_code=404,
                 detail=_error("AGENT_NOT_FOUND", "Agent not found"),
             )
-        if namespace not in DEFAULT_CATALOG.memory_namespaces:
+        if namespace not in ctx.catalog_store.catalog.memory_namespaces:
             raise HTTPException(
                 status_code=422,
                 detail=_error(
@@ -205,7 +244,7 @@ def create_app(ctx: AppContext) -> FastAPI:
         namespace: str,
         override: dict[str, Any] | None,
     ) -> dict[str, Any]:
-        template = DEFAULT_CATALOG.memory_namespaces[namespace]
+        template = ctx.catalog_store.catalog.memory_namespaces[namespace]
         quota = template.quota.model_dump(mode="json")
         if override:
             quota.update(
@@ -254,13 +293,28 @@ def create_app(ctx: AppContext) -> FastAPI:
             )
         return user
 
+    def _normalize_catalog_kind(kind: str) -> str:
+        aliases = {
+            "memory-namespaces": "memory_namespaces",
+            "llm-providers": "llm_providers",
+        }
+        return aliases.get(kind, kind)
+
+    def _after_catalog_write(kind: str) -> None:
+        ctx.memory.bind_catalog(ctx.catalog_store.catalog)
+        if kind == "llm_providers":
+            rebuilt = ctx.catalog_store.rebuild_llm_registry()
+            if rebuilt is not None:
+                ctx.llm_registry = rebuilt
+                ctx.llm.registry = rebuilt
+
     @app.get("/v1/catalog/tools")
     async def catalog_tools(_: None = Depends(require_api_key)) -> dict[str, Any]:
-        return {"tools": DEFAULT_CATALOG.api_payload()["tools"]}
+        return {"tools": ctx.catalog_store.catalog.api_payload()["tools"]}
 
     @app.get("/v1/catalog/skills")
     async def catalog_skills(_: None = Depends(require_api_key)) -> dict[str, Any]:
-        return {"skills": DEFAULT_CATALOG.api_payload()["skills"]}
+        return {"skills": ctx.catalog_store.catalog.api_payload()["skills"]}
 
     @app.get("/v1/catalog/llm-providers")
     async def catalog_llm_providers(_: None = Depends(require_api_key)) -> dict[str, Any]:
@@ -268,11 +322,84 @@ def create_app(ctx: AppContext) -> FastAPI:
 
     @app.get("/v1/catalog/workspaces")
     async def catalog_workspaces(_: None = Depends(require_api_key)) -> dict[str, Any]:
-        payload = DEFAULT_CATALOG.api_payload()
+        payload = ctx.catalog_store.catalog.api_payload()
         return {
             "workspaces": payload["workspaces"],
             "memory_namespaces": payload["memory_namespaces"],
         }
+
+    @app.post("/v1/catalog/{kind}")
+    async def catalog_create(
+        kind: str, body: dict[str, Any], _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        kind = _normalize_catalog_kind(kind)
+        try:
+            entry = await ctx.catalog_store.upsert(kind, body)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail=_error("CATALOG_INVALID", str(exc))
+            ) from exc
+        _after_catalog_write(kind)
+        await ctx.audit.log_api_mutation(
+            endpoint=f"POST /v1/catalog/{kind}",
+            details={"kind": kind, "entry": entry},
+        )
+        return {"entry": entry}
+
+    @app.put("/v1/catalog/{kind}/{entry_id}")
+    async def catalog_put(
+        kind: str,
+        entry_id: str,
+        body: dict[str, Any],
+        _: None = Depends(require_api_key),
+    ) -> dict[str, Any]:
+        kind = _normalize_catalog_kind(kind)
+        id_field = {
+            "tools": "name",
+            "skills": "name",
+            "workspaces": "id",
+            "memory_namespaces": "name",
+            "llm_providers": "provider_id",
+        }.get(kind)
+        if id_field is None:
+            raise HTTPException(
+                status_code=404, detail=_error("CATALOG_KIND_UNKNOWN", f"Unknown kind {kind}")
+            )
+        body = {**body, id_field: entry_id}
+        try:
+            entry = await ctx.catalog_store.upsert(kind, body)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail=_error("CATALOG_INVALID", str(exc))
+            ) from exc
+        _after_catalog_write(kind)
+        await ctx.audit.log_api_mutation(
+            endpoint=f"PUT /v1/catalog/{kind}/{entry_id}",
+            details={"kind": kind, "entry_id": entry_id},
+        )
+        return {"entry": entry}
+
+    @app.delete("/v1/catalog/{kind}/{entry_id}")
+    async def catalog_delete(
+        kind: str, entry_id: str, _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        kind = _normalize_catalog_kind(kind)
+        try:
+            ok = await ctx.catalog_store.delete(kind, entry_id)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422, detail=_error("CATALOG_INVALID", str(exc))
+            ) from exc
+        if not ok:
+            raise HTTPException(
+                status_code=404, detail=_error("CATALOG_ENTRY_NOT_FOUND", "Entry not found")
+            )
+        _after_catalog_write(kind)
+        await ctx.audit.log_api_mutation(
+            endpoint=f"DELETE /v1/catalog/{kind}/{entry_id}",
+            details={"kind": kind, "entry_id": entry_id},
+        )
+        return {"deleted": True, "kind": kind, "entry_id": entry_id}
 
     @app.get("/v1/health")
     async def health(_: None = Depends(require_api_key)) -> dict[str, Any]:
@@ -320,7 +447,9 @@ def create_app(ctx: AppContext) -> FastAPI:
     @app.post("/v1/agents")
     async def create_agent(body: AgentCreate, _: None = Depends(require_api_key)) -> dict[str, Any]:
         try:
-            manifest = canonical_manifest(resolve_manifest(body.manifest))
+            manifest = canonical_manifest(
+                resolve_manifest(body.manifest, catalog=ctx.catalog_store.catalog)
+            )
         except ValueError as exc:
             raise HTTPException(
                 status_code=422,
@@ -342,6 +471,48 @@ def create_app(ctx: AppContext) -> FastAPI:
             details={"agent_id": body.id, "manifest_hash": mh},
         )
         return {"id": body.id, "manifest_hash": mh}
+
+    @app.patch("/v1/agents/{agent_id}")
+    async def patch_agent(
+        agent_id: str, body: AgentPatch, _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        agent = await ctx.db.get_agent(agent_id)
+        if agent is None:
+            raise HTTPException(
+                status_code=404,
+                detail=_error("AGENT_NOT_FOUND", "Agent not found"),
+            )
+        active_vm = vm_launcher.registry.get_by_agent(agent_id)
+        if active_vm is not None and active_vm.status in {"running", "starting", "degraded"}:
+            old = agent["manifest"]
+            new_m = body.manifest.model_dump(mode="json")
+            unsafe_keys = ("engines", "workspaces", "rootfs_image", "skills")
+            for key in unsafe_keys:
+                if old.get(key) != new_m.get(key):
+                    raise HTTPException(
+                        status_code=409,
+                        detail=_error(
+                            "AGENT_PATCH_REQUIRES_STOP",
+                            "Stop the agent VM before changing engines, workspaces, skills, or rootfs",
+                            {"field": key, "status": active_vm.status},
+                        ),
+                    )
+        try:
+            manifest = canonical_manifest(
+                resolve_manifest(body.manifest, catalog=ctx.catalog_store.catalog)
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=_error("MANIFEST_CATALOG_INVALID", str(exc)),
+            ) from exc
+        mh = manifest_hash(manifest)
+        await ctx.db.upsert_agent(agent_id, mh, manifest)
+        await ctx.audit.log_api_mutation(
+            endpoint=f"PATCH /v1/agents/{agent_id}",
+            details={"agent_id": agent_id, "manifest_hash": mh},
+        )
+        return {"id": agent_id, "manifest_hash": mh, "manifest": manifest}
 
     @app.get("/v1/agents/{agent_id}/manifest")
     async def get_agent_manifest(
@@ -374,7 +545,7 @@ def create_app(ctx: AppContext) -> FastAPI:
         }
         namespaces = []
         for namespace in _manifest_namespaces(agent):
-            if namespace not in DEFAULT_CATALOG.memory_namespaces:
+            if namespace not in ctx.catalog_store.catalog.memory_namespaces:
                 continue
             namespaces.append(
                 _namespace_payload(
@@ -598,7 +769,7 @@ def create_app(ctx: AppContext) -> FastAPI:
         rule_id: str | None = None,
         grant_id: str | None = None,
         elevation_id: str | None = None,
-        from_: str | None = None,
+        from_: str | None = Query(default=None, alias="from"),
         to: str | None = None,
         limit: int = 100,
         _: None = Depends(require_api_key),
@@ -625,6 +796,7 @@ def create_app(ctx: AppContext) -> FastAPI:
     @app.post("/v1/users")
     async def create_user(body: UserCreate, _: None = Depends(require_api_key)) -> dict[str, Any]:
         secret = body.pin or body.password
+        existing = await ctx.db.get_user(body.id)
         profile = {
             "groups": body.groups,
             "privileges": body.privileges,
@@ -633,6 +805,10 @@ def create_app(ctx: AppContext) -> FastAPI:
         }
         if secret:
             profile["credential_hash"] = hash_secret(secret)
+        elif existing and existing.get("credential_hash"):
+            profile["credential_hash"] = existing["credential_hash"]
+        if existing and existing.get("active") is False and "active" not in profile:
+            profile["active"] = False
         await ctx.db.upsert_user(body.id, body.role, profile)
         await ctx.audit.log_security_event(
             event_type="user_upserted",
@@ -646,6 +822,123 @@ def create_app(ctx: AppContext) -> FastAPI:
         if user is None:
             raise HTTPException(status_code=404, detail=_error("USER_NOT_FOUND", "User not found"))
         return {"user": user}
+
+    @app.patch("/v1/users/{user_id}")
+    async def patch_user(
+        user_id: str, body: UserPatch, _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        updates: dict[str, Any] = {}
+        data = body.model_dump(exclude_unset=True)
+        if "role" in data:
+            updates["role"] = data["role"]
+        for key in ("groups", "privileges", "allowed_agents", "active"):
+            if key in data:
+                updates[key] = data[key]
+        if "aliases" in data and data["aliases"] is not None:
+            updates["aliases"] = [
+                alias.model_dump(mode="json", exclude_none=True)
+                if hasattr(alias, "model_dump")
+                else alias
+                for alias in body.aliases or []
+            ]
+        secret = body.pin or body.password
+        if secret:
+            updates["credential_hash"] = hash_secret(secret)
+        user = await ctx.db.patch_user(user_id, updates)
+        if user is None:
+            raise HTTPException(status_code=404, detail=_error("USER_NOT_FOUND", "User not found"))
+        await ctx.audit.log_security_event(
+            event_type="user_patched",
+            details={"user_id": user_id, "fields": sorted(updates.keys())},
+        )
+        return {"user": user}
+
+    @app.delete("/v1/users/{user_id}")
+    async def delete_user(user_id: str, _: None = Depends(require_api_key)) -> dict[str, Any]:
+        ok = await ctx.db.deactivate_user(user_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail=_error("USER_NOT_FOUND", "User not found"))
+        await ctx.audit.log_security_event(
+            event_type="user_deactivated",
+            details={"user_id": user_id},
+        )
+        return {"id": user_id, "active": False}
+
+    @app.get("/v1/groups")
+    async def list_groups(_: None = Depends(require_api_key)) -> dict[str, Any]:
+        return {"groups": await ctx.db.list_groups()}
+
+    @app.post("/v1/groups")
+    async def create_group(body: GroupCreate, _: None = Depends(require_api_key)) -> dict[str, Any]:
+        group = await ctx.db.upsert_group(
+            body.id,
+            parent_group=body.parent_group,
+            inherited_rules=body.inherited_rules,
+            rule_ids=body.rule_ids,
+            members=body.members,
+        )
+        await ctx.audit.log_security_event(
+            event_type="group_upserted",
+            details={"group_id": body.id},
+        )
+        return {"group": group}
+
+    @app.patch("/v1/groups/{group_id}")
+    async def patch_group(
+        group_id: str, body: GroupPatch, _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        existing = await ctx.db.get_group(group_id)
+        if existing is None:
+            raise HTTPException(
+                status_code=404, detail=_error("GROUP_NOT_FOUND", "Group not found")
+            )
+        data = body.model_dump(exclude_unset=True)
+        group = await ctx.db.upsert_group(
+            group_id,
+            parent_group=data.get("parent_group", existing["parent_group"]),
+            inherited_rules=data.get("inherited_rules", existing["inherited_rules"]),
+            rule_ids=data.get("rule_ids", existing["rule_ids"]),
+            members=data.get("members", existing["members"]),
+        )
+        await ctx.audit.log_security_event(
+            event_type="group_upserted",
+            details={"group_id": group_id},
+        )
+        return {"group": group}
+
+    @app.delete("/v1/groups/{group_id}")
+    async def delete_group(group_id: str, _: None = Depends(require_api_key)) -> dict[str, Any]:
+        ok = await ctx.db.delete_group(group_id)
+        if not ok:
+            raise HTTPException(
+                status_code=404, detail=_error("GROUP_NOT_FOUND", "Group not found")
+            )
+        await ctx.audit.log_security_event(
+            event_type="group_deleted",
+            details={"group_id": group_id},
+        )
+        return {"id": group_id, "deleted": True}
+
+    @app.post("/v1/groups/{group_id}/members")
+    async def add_group_member(
+        group_id: str, body: GroupMemberAdd, _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        existing = await ctx.db.get_group(group_id)
+        if existing is None:
+            raise HTTPException(
+                status_code=404, detail=_error("GROUP_NOT_FOUND", "Group not found")
+            )
+        members = list(existing["members"])
+        if body.user_id not in members:
+            members.append(body.user_id)
+        group = await ctx.db.upsert_group(
+            group_id,
+            parent_group=existing["parent_group"],
+            inherited_rules=existing["inherited_rules"],
+            rule_ids=existing["rule_ids"],
+            members=members,
+        )
+        return {"group": group}
 
     @app.get("/v1/grants")
     async def list_grants(
@@ -798,6 +1091,48 @@ def create_app(ctx: AppContext) -> FastAPI:
             details={"elevation_id": elevation_id, "approver_user_id": approver["id"]},
         )
         return {"id": elevation_id, "status": "denied"}
+
+    @app.get("/v1/settings")
+    async def get_settings(_: None = Depends(require_api_key)) -> dict[str, Any]:
+        rows = await ctx.db.list_settings()
+        return {"settings": settings_public_view(rows)}
+
+    @app.patch("/v1/settings")
+    async def patch_settings(
+        body: dict[str, Any], _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        updates = body.get("settings") if isinstance(body.get("settings"), dict) else body
+        if not isinstance(updates, dict):
+            raise HTTPException(
+                status_code=422,
+                detail=_error("SETTINGS_INVALID", "Expected settings object map"),
+            )
+        restart_keys: list[str] = []
+        for key, value in updates.items():
+            meta = SETTINGS_SPEC.get(key)
+            if meta is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail=_error("SETTINGS_UNKNOWN_KEY", f"Unknown setting: {key}"),
+                )
+            _attr, secret, restart, _group, _env = meta
+            if secret and (value is None or value == "" or value == "********"):
+                continue
+            await ctx.db.upsert_setting(key, value, secret=secret, restart_required=restart)
+            if restart:
+                restart_keys.append(key)
+        merged = await load_settings_into_config(ctx.db, ctx.config)
+        apply_settings_to_context(ctx, merged)
+        rate_limiter.limit = ctx.config.api_rate_limit_per_minute
+        await ctx.audit.log_api_mutation(
+            endpoint="PATCH /v1/settings",
+            details={"keys": sorted(updates.keys()), "restart_required": restart_keys},
+        )
+        rows = await ctx.db.list_settings()
+        return {
+            "settings": settings_public_view(rows),
+            "restart_required": restart_keys,
+        }
 
     if ctx.config.ui_enabled:
         from corvus.management.ui import mount_ui

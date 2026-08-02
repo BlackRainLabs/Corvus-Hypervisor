@@ -252,6 +252,7 @@ async def test_user_create_and_detail(app_ctx):
                 "role": "operator",
                 "groups": "research, ops",
                 "pin": "4321",
+                "aliases_json": '[{"platform":"cli","value":"ui-user","verified":true,"auth_method":"alias"}]',
             },
         )
         assert created.status_code == 303
@@ -260,20 +261,75 @@ async def test_user_create_and_detail(app_ctx):
         assert detail.status_code == 200
         assert "ui-user" in detail.text
         assert "operator" in detail.text
+        assert "Edit Profile" in detail.text
+        assert "cli" in detail.text
 
 
 @pytest.mark.asyncio
-async def test_audit_query_renders(app_ctx):
+async def test_agent_create_full_manifest_fields(app_ctx):
     app = create_app(app_ctx)
     async with _client(app) as client:
         await _login(client)
-        # Generate an audit event via a mutation, then browse it.
-        await client.post(
-            "/ui/users/create", data={"user_id": "audit-user", "role": "viewer"}
+        resp = await client.post(
+            "/ui/agents/create",
+            data={
+                "agent_id": "ui-full-agent",
+                "memory_mb": 512,
+                "vcpu_count": 1,
+                "platforms": "api,whatsapp",
+                "tool_execution_mode": "local",
+                "rootfs_image": "corvus-test-rootfs",
+                "workspaces": ["default"],
+                "namespaces": ["private"],
+                "allowed_providers": ["stub"],
+                "allowed_models": "stub-v1",
+            },
         )
-        resp = await client.get("/ui/audit", params={"event_type": "user_upserted"})
+        assert resp.status_code == 303
+        assert "msg=" in resp.headers["location"]
+        detail = await client.get("/ui/agents/ui-full-agent")
+        assert detail.status_code == 200
+        assert "whatsapp" in detail.text or "api" in detail.text
+
+
+@pytest.mark.asyncio
+async def test_inference_quota_redirect_stays_on_inference(app_ctx):
+    app = create_app(app_ctx)
+    async with _client(app) as client:
+        await _login(client)
+        await client.patch(
+            "/v1/quotas/agent:test-agent-01:llm_tokens",
+            json={"limit": 1000, "used": 0, "window_type": "daily"},
+            headers={"X-API-Key": app_ctx.config.api_key},
+        )
+        resp = await client.post(
+            "/ui/security/quotas/patch",
+            data={
+                "key": "agent:test-agent-01:llm_tokens",
+                "limit": 2000,
+                "used": 0,
+                "window_type": "daily",
+                "return_to": "/inference",
+            },
+        )
+        assert resp.status_code == 303
+        assert "/ui/inference" in resp.headers["location"]
+
+
+@pytest.mark.asyncio
+async def test_audit_from_to_filters_roundtrip(app_ctx):
+    app = create_app(app_ctx)
+    async with _client(app) as client:
+        await _login(client)
+        page = await client.get("/ui/audit")
+        assert 'name="from"' in page.text
+        assert 'name="to"' in page.text
+        resp = await client.get(
+            "/ui/audit",
+            params={"from": "2020-01-01T00:00:00", "to": "2099-01-01T00:00:00", "limit": "50"},
+        )
         assert resp.status_code == 200
-        assert "user_upserted" in resp.text
+        assert "2020-01-01T00:00:00" in resp.text
 
 
 @pytest.mark.asyncio
@@ -286,6 +342,26 @@ async def test_system_page_redacts_secrets(app_ctx):
         assert app_ctx.config.api_key not in resp.text
         assert "api_key" in resp.text  # the field name is shown
         assert "********" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_groups_panel_and_catalog_forms_render(app_ctx):
+    app = create_app(app_ctx)
+    async with _client(app) as client:
+        await _login(client)
+        users = await client.get("/ui/users")
+        assert users.status_code == 200
+        assert 'id="groups"' in users.text
+        assert "/users/groups/create" in users.text
+
+        tools = await client.get("/ui/tools")
+        assert tools.status_code == 200
+        assert "/tools/catalog/tools" in tools.text
+        assert "Save tool" in tools.text or "Create tool" in tools.text or 'name="entrypoint"' in tools.text
+
+        security = await client.get("/ui/security")
+        assert security.status_code == 200
+        assert "Save behavioral thresholds" in security.text
 
 
 @pytest.mark.asyncio

@@ -155,10 +155,10 @@ NAV: tuple[NavItem, ...] = (
         "Tools & Skills",
         "/tools",
         subs=(
-            NavSub("Tools", "#tools", "read-only"),
-            NavSub("Skills", "#skills", "read-only"),
-            NavSub("Workspaces", "#workspaces", "read-only"),
-            NavSub("Execution Policy", "#exec-policy", "read-only"),
+            NavSub("Tools", "#tools", "edit"),
+            NavSub("Skills", "#skills", "edit"),
+            NavSub("Workspaces", "#workspaces", "edit"),
+            NavSub("Execution Policy", "#exec-policy", "informational"),
         ),
     ),
     NavItem(
@@ -166,9 +166,9 @@ NAV: tuple[NavItem, ...] = (
         "Inference",
         "/inference",
         subs=(
-            NavSub("Providers", "#providers", "read-only"),
+            NavSub("Providers", "#providers", "edit"),
             NavSub("Token Quotas", "#token-quotas", "edit"),
-            NavSub("Runtime Settings", "#runtime-settings", "read-only"),
+            NavSub("Runtime Settings", "#runtime-settings", "edit"),
         ),
     ),
     NavItem(
@@ -176,9 +176,9 @@ NAV: tuple[NavItem, ...] = (
         "Memory",
         "/memory",
         subs=(
-            NavSub("Namespaces", "#namespaces", "read-only"),
-            NavSub("Retention Sweeper", "#sweeper", "read-only"),
-            NavSub("Encryption", "#encryption", "read-only"),
+            NavSub("Namespaces", "#namespaces", "edit"),
+            NavSub("Retention Sweeper", "#sweeper", "edit"),
+            NavSub("Encryption", "#encryption", "edit"),
         ),
     ),
     NavItem(
@@ -189,7 +189,7 @@ NAV: tuple[NavItem, ...] = (
             NavSub("Users", "#users", "edit"),
             NavSub("Create User", "#create-user", "edit"),
             NavSub("Roles & Privileges", "#roles", "read-only"),
-            NavSub("Groups", "#groups", "read-only"),
+            NavSub("Groups", "#groups", "edit"),
         ),
     ),
     NavItem(
@@ -202,7 +202,7 @@ NAV: tuple[NavItem, ...] = (
             NavSub("Grants", "#grants", "edit"),
             NavSub("Elevations", "#elevations", "edit"),
             NavSub("Quotas & Limits", "#quotas", "edit"),
-            NavSub("Behavioral Monitoring", "#behavioral", "read-only"),
+            NavSub("Behavioral Monitoring", "#behavioral", "edit"),
         ),
     ),
     NavItem("audit", "Audit", "/audit"),
@@ -211,9 +211,9 @@ NAV: tuple[NavItem, ...] = (
         "System",
         "/system",
         subs=(
-            NavSub("Health", "#health", "read-only"),
-            NavSub("Metrics", "#metrics", "read-only"),
-            NavSub("Configuration", "#config", "read-only"),
+            NavSub("Health", "#health", "informational"),
+            NavSub("Metrics", "#metrics", "informational"),
+            NavSub("Configuration", "#config", "edit"),
         ),
     ),
 )

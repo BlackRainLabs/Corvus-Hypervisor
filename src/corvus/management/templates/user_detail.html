@@ -4,19 +4,43 @@
 {% block content %}
 <p><a href="{{ prefix }}/users">← All users</a></p>
 <div class="section">
-  <h2>Profile</h2>
+  <h2>Edit Profile <span class="badge edit">edit</span></h2>
   <div class="card">
-    <div class="kv">
-      <dt>Role</dt><dd>{{ user.get('role') }}</dd>
-      <dt>Groups</dt><dd>{{ user.get('groups', []) | join(', ') or '-' }}</dd>
-      <dt>Privileges</dt><dd>{{ user.get('privileges', []) | join(', ') or '-' }}</dd>
-      <dt>Allowed Agents</dt><dd>{{ user.get('allowed_agents', []) | join(', ') or '-' }}</dd>
-      <dt>Credential</dt><dd>{{ 'set (hashed)' if user.get('credential_hash') else 'none' }}</dd>
-    </div>
+    <form method="post" action="{{ prefix }}/users/create">
+      <input type="hidden" name="return_to" value="/users/{{ user.get('id') }}">
+      <div class="form-row">
+        <div class="field"><label>User ID</label><input name="user_id" value="{{ user.get('id') }}" readonly></div>
+        <div class="field"><label>Role</label>
+          <select name="role">
+            {% for r in ['researcher','operator','admin','viewer'] %}
+            <option value="{{ r }}" {% if user.get('role') == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field"><label>Groups</label><input name="groups" value="{{ user.get('groups', []) | join(', ') }}"></div>
+        <div class="field"><label>Privileges</label><input name="privileges" value="{{ user.get('privileges', []) | join(', ') }}"></div>
+        <div class="field"><label>Allowed Agents</label><input name="allowed_agents" value="{{ user.get('allowed_agents', []) | join(', ') }}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Aliases (JSON array)</label>
+          <textarea name="aliases_json" rows="4">{{ user.get('aliases', []) | tojson(indent=2) }}</textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>New PIN</label><input name="pin" type="password" autocomplete="off"><div class="help">leave blank to keep</div></div>
+        <div class="field"><label>New Password</label><input name="password" type="password" autocomplete="off"><div class="help">leave blank to keep</div></div>
+      </div>
+      <button class="btn primary" type="submit">Save changes</button>
+    </form>
+    <form method="post" action="{{ prefix }}/users/{{ user.get('id') }}/deactivate" style="margin-top:12px;" onsubmit="return confirm('Deactivate this user?');">
+      <button class="btn danger" type="submit">Deactivate user</button>
+    </form>
   </div>
 </div>
 <div class="section">
-  <h2>Identity Aliases</h2>
+  <h2>Identity Aliases <span class="badge informational">informational</span></h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Platform</th><th>Value</th><th>Verified</th><th>Auth Method</th><th>Display Name</th></tr></thead>
@@ -35,7 +59,7 @@
   </div>
 </div>
 <div class="section">
-  <h2>Raw Profile</h2>
+  <h2>Raw Profile <span class="badge informational">informational</span></h2>
   <pre class="code">{{ user_json }}</pre>
 </div>
 {% endblock %}

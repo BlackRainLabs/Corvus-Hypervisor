@@ -30,6 +30,12 @@
 - ~~Implement behavioral `tool_pattern_deviation` (tool-call rate z-score)~~ implemented
 - ~~Management API rate limiting (100 req/min default) + harden elevation webhook (HMAC + tests)~~ implemented
 - ~~Expand Engine 1 tool surface: registry-driven runner + `file_read` (skills/workspace mounts deferred)~~ implemented
+- ~~**Phase 9 — GUI Full Configurability**~~ implemented: mutable control-plane state editable in Operator Console; DB-backed catalogs/settings; env as bootstrap/break-glass
+  - ~~9.0 Inventory & UX contract (field taxonomy, docs)~~
+  - ~~9.1 Close gaps on existing APIs (UI-first: full agent create, elevation `create_grant`, user aliases/edit, audit time filters, inference quota redirect)~~
+  - ~~9.2 Missing Management API + UI (`PATCH` agents, `PATCH`/`DELETE` users, groups CRUD)~~
+  - ~~9.3 Catalog CRUD (tools/skills/workspaces/memory namespaces in SQLite)~~
+  - ~~9.4 Runtime settings + provider registry in GUI (`/v1/settings`, LLM provider CRUD, restart_required bind knobs)~~
 - Skill runtime beyond catalog placeholders; Firecracker workspace drive mounts (next)
 
 ## Medium Term (3-6 Months)

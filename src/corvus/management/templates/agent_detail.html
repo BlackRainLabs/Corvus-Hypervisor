@@ -61,7 +61,21 @@
 </div>
 
 <div class="section">
-  <h2>Resolved Manifest</h2>
+  <h2>Edit Manifest <span class="badge edit">edit</span></h2>
+  <div class="card">
+    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/patch">
+      <div class="field">
+        <label>Manifest JSON</label>
+        <textarea name="manifest_json" rows="18" class="mono" required>{{ manifest_json }}</textarea>
+        <div class="help">Engine/workspace/rootfs/skills changes require the VM to be stopped.</div>
+      </div>
+      <button class="btn primary" type="submit">Save manifest</button>
+    </form>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Resolved Manifest <span class="badge informational">informational</span></h2>
   <pre class="code">{{ manifest_json }}</pre>
 </div>
 {% endblock %}

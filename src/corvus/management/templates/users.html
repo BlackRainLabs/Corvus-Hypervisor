@@ -49,6 +49,12 @@
         <div class="field"><label>Allowed Agents</label><input name="allowed_agents" placeholder="* or agent ids"><div class="help">comma-separated</div></div>
       </div>
       <div class="form-row">
+        <div class="field"><label>Aliases (JSON array)</label>
+          <textarea name="aliases_json" rows="3" placeholder='[{"platform":"cli","value":"analyst-01","verified":true,"auth_method":"alias"}]'></textarea>
+          <div class="help">Identity aliases for channel resolution</div>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="field"><label>PIN</label><input name="pin" type="password" autocomplete="off"><div class="help">stored as hash</div></div>
         <div class="field"><label>Password</label><input name="password" type="password" autocomplete="off"><div class="help">stored as hash</div></div>
       </div>
@@ -71,9 +77,43 @@
 </div>
 
 <div class="section" id="groups">
-  <h2>Groups <span class="badge read-only">read-only</span></h2>
-  <div class="card">
-    <p class="muted">Group CRUD endpoints are documented in the Management API but not yet implemented on the server. Group membership is currently managed inline on each user (<span class="mono">groups</span> field). This panel will gain full CRUD when the endpoints land.</p>
+  <h2>Groups <span class="badge edit">edit</span></h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Parent</th><th>Members</th><th>Rules</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for g in groups %}
+        <tr>
+          <td><strong>{{ g.get('id') }}</strong></td>
+          <td>{{ g.get('parent_group') or '-' }}</td>
+          <td>{{ g.get('members', []) | join(', ') or '-' }}</td>
+          <td class="faint">{{ g.get('rule_ids', []) | join(', ') or '-' }}</td>
+          <td>
+            <form method="post" action="{{ prefix }}/users/groups/{{ g.get('id') }}/delete" onsubmit="return confirm('Delete group?');">
+              <button class="btn sm danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="5" class="empty">No groups</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <h3>Create / update group</h3>
+    <form method="post" action="{{ prefix }}/users/groups/create">
+      <div class="form-row cols-3">
+        <div class="field"><label>Group ID</label><input name="group_id" required placeholder="research"></div>
+        <div class="field"><label>Parent group</label><input name="parent_group" placeholder="optional"></div>
+        <div class="field"><label>Inherited rules</label>
+          <select name="inherited_rules"><option value="1">yes</option><option value="0">no</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Members</label><input name="members" placeholder="user-a, user-b"><div class="help">comma-separated user ids</div></div>
+        <div class="field"><label>Rule IDs</label><input name="rule_ids" placeholder="rule-1, rule-2"><div class="help">comma-separated</div></div>
+      </div>
+      <button class="btn primary" type="submit">Save group</button>
+    </form>
   </div>
 </div>
 {% endblock %}

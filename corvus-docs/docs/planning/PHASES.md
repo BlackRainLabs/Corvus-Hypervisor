@@ -168,7 +168,15 @@
 - Server-rendered operator GUI mounted on the Management API (`/ui`), organized around a persistent left sidebar: Summary, Agents, Tools & Skills, Inference, Memory, Users & Access, Security, Audit, System
 - Zero-build stack: Jinja2 + HTMX (dashboard polling, live rule simulator) + Alpine.js, all vendored (no CDN)
 - Presentation layer only: UI handlers call the server's own `/v1` endpoints in-process (httpx `ASGITransport` + server-held API key), reusing all validation and audit
-- Full read/write for API-mutable resources (agents launch/stop + create, namespace quotas, RBAC rules CRUD + simulator, grants, elevations approve/deny, quotas, users); env-only settings surfaced read-only under their category
+- Full read/write for API-mutable resources (agents launch/stop + create, namespace quotas, RBAC rules CRUD + simulator, grants, elevations approve/deny, quotas, users); Phase 8 left remaining knobs env-only (superseded by Phase 9)
 - Signed HttpOnly session cookie login against the Management API key; secrets redacted on the System page; toggles via `CORVUS_UI_ENABLED`, `CORVUS_UI_SESSION_SECRET`, `CORVUS_UI_PATH_PREFIX`
+
+## Phase 9: GUI Full Configurability — Implemented
+- **Product rule:** mutable control-plane state is editable in the GUI; informational/secret/restart_required taxonomy in OPERATIONS.md
+- **9.0** Inventory & UX contract (docs/roadmap)
+- **9.1** UI gaps on existing APIs (full agent create, elevation `create_grant`, user aliases/detail edit, audit `from`/`to`, inference quota redirect)
+- **9.2** `PATCH /v1/agents/{id}`, user PATCH/DELETE (deactivate), groups CRUD
+- **9.3** SQLite-backed catalog CRUD + Tools/Memory editors; Memory Service binds live `CatalogStore`
+- **9.4** `server_settings` + `/v1/settings`, LLM provider CRUD/reload, System/Inference/Memory/Security edit forms; bind changes require operator restart (no UI auto-kill)
 
 **Black Rain Labs - Research & Development Division**

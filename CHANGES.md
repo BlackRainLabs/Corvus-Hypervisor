@@ -4,6 +4,87 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-02] - Phase 9.4: Runtime settings + LLM provider registry
+
+**Documents Modified:**
+- `src/corvus/server/settings_store.py`, `db.py` (`server_settings`), `bootstrap.py`
+- `src/corvus/management/api.py` (`GET`/`PATCH /v1/settings`), `ui.py`, System/Inference/Memory/Security templates
+- `src/corvus/llm/registry.py`, `catalog.py` (`api_base_url` on providers)
+- `tests/test_phase9_config.py`, `tests/test_ui.py`
+- OPERATIONS, MANAGEMENT-API, ROADMAP, PHASES, COMPONENT-STATUS
+
+**Key Changes:**
+- SQLite `server_settings` seeded from `ServerConfig`; GUI/API edit with secret redaction and `restart_required` for bind knobs.
+- Env break-glass wins when explicitly set; otherwise DB applies in-process to live services.
+- LLM providers CRUD in SQLite with in-process registry reload; YAML seeds once and is not rewritten over GUI edits.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-02] - Phase 9.3: Catalog CRUD
+
+**Documents Modified:**
+- `src/corvus/server/catalog_store.py`, `db.py` (`catalog_entries`)
+- `src/corvus/management/api.py` (catalog POST/PUT/DELETE), Tools/Memory UI
+- `src/corvus/memory/service.py` (binds live catalog)
+- `tests/test_phase9_config.py`
+
+**Key Changes:**
+- Tools/skills/workspaces/memory namespaces persist in SQLite; seed from `DEFAULT_CATALOG` when empty.
+- Management API write paths refresh `AppContext` catalog; unknown ids still rejected at resolve/launch.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-02] - Phase 9.2: Agent/user/group Management API + UI
+
+**Documents Modified:**
+- `src/corvus/management/api.py` (`PATCH` agents/users, `DELETE` users, groups CRUD)
+- `src/corvus/server/db.py` (groups table, user deactivate/patch)
+- Agent detail / Users templates + UI handlers
+- `tests/test_phase9_config.py`, MANAGEMENT-API
+
+**Key Changes:**
+- Agent manifest PATCH re-resolves/re-hashes; blocks unsafe mid-flight changes while VM running.
+- User PATCH + deactivate; groups table with membership CRUD and Users page panel.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-02] - Phase 9.1: Operator Console gaps on existing APIs
+
+**Documents Modified:**
+- `src/corvus/management/ui.py`, templates (`agents`, `users`, `user_detail`, `security`, `audit`, `inference`)
+- `src/corvus/management/api.py` (audit `from` query alias; user upsert preserves credential)
+- `tests/test_ui.py`
+
+**Key Changes:**
+- Agent create form covers platforms, tool_execution_mode, provider_tools, workspaces, rootfs, launch_grants JSON.
+- Elevation approve supports optional `create_grant`; deny has pin/password parity.
+- User aliases on create; user detail edit via POST upsert; audit from/to filters; inference quota save stays on Inference.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
+## [2026-08-02] - Phase 9.0: GUI configurability UX contract
+
+**Documents Modified:**
+- `corvus-docs/docs/planning/OPERATIONS.md`, `ROADMAP.md`, `PHASES.md`, `COMPONENT-STATUS.md`
+- `corvus-docs/docs/architecture/hypervisor/MANAGEMENT-API.md`
+
+**Key Changes:**
+- Defined Phase 9 field taxonomy (`editable` / `informational` / `secret` / `restart_required`) and SQLite-backed settings/catalog product rule.
+- Retired “env-only shown read-only” as the Operator Console default; env remains bootstrap/break-glass.
+- Seeded near-term roadmap 9.1–9.4; documented planned writable Management API surfaces (catalog CRUD, settings, agent/user/group PATCH).
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-02] - Public release v0.8.0
 
 **Documents Modified:**

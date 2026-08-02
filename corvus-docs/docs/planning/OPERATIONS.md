@@ -2,13 +2,13 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-12
-**Related Documents:** ../architecture/hypervisor/MANAGEMENT-API.md, COMPONENT-STATUS.md, PHASES.md, ../../../CHANGES.md
+**Last Updated:** 2026-08-02
+**Related Documents:** ../architecture/hypervisor/MANAGEMENT-API.md, COMPONENT-STATUS.md, PHASES.md, ROADMAP.md, ../../../CHANGES.md
 **Must Update on Change:** ../../../CHANGES.md
 
 # Corvus Operations Guide
 
-Operator reference for running, observing, and regression-testing Corvus Hypervisor (Phase 6).
+Operator reference for running, observing, and regression-testing Corvus Hypervisor (Phases 6–9).
 
 ## Daily development (native TCP)
 
@@ -60,17 +60,49 @@ Management API process at `http://<mgmt_host>:<mgmt_port>/ui` (default
   (LLM providers, token quotas), **Memory** (namespaces, sweeper, encryption),
   **Users & Access**, **Security** (RBAC rules + dry-run simulator, grants,
   elevations, quotas, behavioral thresholds), **Audit** (filterable log browser),
-  **System** (health, metrics, redacted server config).
+  **System** (health, metrics, server settings).
 - The console is a presentation layer: every action calls the same `/v1` endpoints
   in-process, so all validation and audit behavior is identical to direct API use.
-  Environment-only settings are shown read-only under their category.
+
+### Phase 9 product rule — GUI field taxonomy
+
+Mutable control-plane state is **editable** in the GUI. Read-only is reserved for
+informational surfaces. Every sidebar field/section is tagged as one of:
+
+| Tag | Meaning |
+|-----|---------|
+| `editable` | Operator may create/update/delete via console → `/v1` |
+| `informational` | Live/computed view only (health tiles, metrics dump, audit bodies, resolved manifest JSON, role glossary) |
+| `secret` | Write-only replace after set; never returned in clear (API key, master key, webhook secret, session secret, provider credentials) |
+| `restart_required` | Editable in GUI but bind host/port/transport changes apply only after operator restarts `corvus-server` (UI does not auto-kill the process) |
+
+**Persistence:** catalogs and runtime settings are SQLite-backed (same DB as agents/rules).
+Seed on first boot from `DEFAULT_CATALOG`, `config/llm_providers.yaml`, and
+`load_config()` defaults. Environment variables remain **bootstrap / break-glass**
+(if an env var is explicitly set it wins; otherwise DB is source of truth)—not the
+primary day-2 ops path.
+
+| Sidebar section | Taxonomy |
+|-----------------|----------|
+| Overview health tiles / pending elevations list | informational (elevations: link to Security) |
+| Agents list, create, detail editor, launch/stop, namespace quotas | editable; resolved manifest JSON dump informational |
+| Tools / Skills / Workspaces catalogs | editable; exec-policy help informational |
+| Inference providers | editable; token quotas editable; secrets write-only |
+| Inference runtime settings | editable; bind-related knobs may be restart_required on System |
+| Memory namespaces catalog | editable; sweeper/encryption settings editable; liveness informational |
+| Users create/edit/deactivate, groups | editable; roles glossary informational |
+| Security rules/grants/elevations/quotas | editable; behavioral thresholds editable |
+| Audit filters | editable filters only; log bodies informational |
+| System health / Prometheus dump | informational |
+| System configuration (bind, rate limit, UI knobs, webhooks) | editable; bind host/port/transport restart_required; secrets secret |
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `CORVUS_UI_ENABLED` | `1` | Set `0` to disable the console (routes return 404) |
-| `CORVUS_UI_SESSION_SECRET` | random per process | HMAC secret for session cookies; set a stable value across restarts/replicas |
+| `CORVUS_UI_ENABLED` | `1` | Set `0` to disable the console (routes return 404); also seedable via `/v1/settings` |
+| `CORVUS_UI_SESSION_SECRET` | random per process | HMAC secret for session cookies; set a stable value across restarts/replicas (secret) |
 | `CORVUS_UI_PATH_PREFIX` | `/ui` | Base path the console mounts under |
 | `CORVUS_API_RATE_LIMIT_PER_MINUTE` | `100` | Management API limit per API key (`0` disables); UI in-process calls are exempt |
+| `CORVUS_MGMT_HOST` / `CORVUS_MGMT_PORT` | `127.0.0.1` / `8080` | Management bind; editable in GUI with restart_required |
 
 The console is bundled with vendored HTMX and Alpine.js assets (no CDN / external
 network required).
