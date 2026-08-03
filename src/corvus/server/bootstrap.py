@@ -16,6 +16,7 @@ from corvus.policy.grants import GrantEngine
 from corvus.policy.identity import IdentityResolver
 from corvus.policy.quota import QuotaService
 from corvus.policy.rules import RuleStore
+from corvus.server.catalog_store import CatalogStore
 from corvus.server.config import ServerConfig, load_config
 from corvus.server.correlation import CorrelationStore
 from corvus.server.db import Database, hash_secret
@@ -26,11 +27,15 @@ from corvus.server.manifest import (
     default_chat_manifest,
     full_capability_manifest,
     manifest_hash,
-    sync_llm_registry_to_catalog,
 )
 from corvus.server.pending_replay import PendingReplayQueue
 from corvus.server.router import MessageRouter
 from corvus.server.session import SessionManager
+from corvus.server.settings_store import (
+    apply_settings_to_context,
+    ensure_settings_seeded,
+    load_settings_into_config,
+)
 from corvus.server.transport import AgentTransport
 from corvus.tools.service import ToolGatewayService
 
@@ -46,6 +51,7 @@ class AppContext:
         self.config = config or load_config()
         self.transport = AgentTransport()
         self.db = Database(self.config.db_path)
+        self.catalog_store = CatalogStore(self.db)
         self.sessions = SessionManager(self.db, self.config)
         self.correlation = CorrelationStore(self.db, self.config)
         self.rules = RuleStore(self.db)
@@ -56,7 +62,6 @@ class AppContext:
             memory_writes_daily_limit=self.config.memory_writes_daily_limit,
         )
         self.llm_registry = LlmProviderRegistry.load(self.config.llm_providers_path)
-        sync_llm_registry_to_catalog(self.llm_registry)
         self.behavioral = BehavioralMonitor(self.db, self.config)
         self.facts = FactGatherer(
             self.db,
@@ -123,6 +128,16 @@ class AppContext:
 
     async def startup(self) -> None:
         await self.db.connect()
+        await self.catalog_store.ensure_seeded()
+        await self.catalog_store.seed_llm_providers_from_registry(self.llm_registry)
+        rebuilt = self.catalog_store.rebuild_llm_registry()
+        if rebuilt is not None:
+            self.llm_registry = rebuilt
+            self.llm.registry = rebuilt
+        self.memory.bind_catalog(self.catalog_store.catalog)
+        await ensure_settings_seeded(self.db, self.config)
+        merged = await load_settings_into_config(self.db, self.config)
+        apply_settings_to_context(self, merged)
         await self.rules.load_from_file(self.config.rules_path)
         await self.db.upsert_agent(TEST_AGENT_ID, TEST_MANIFEST_HASH, TEST_MANIFEST)
         await self.db.upsert_user(

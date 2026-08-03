@@ -8,10 +8,10 @@
 </div>
 
 <div class="section" id="tools">
-  <h2>Tools <span class="badge read-only">read-only</span></h2>
+  <h2>Tools <span class="badge edit">edit</span></h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Name</th><th>Version</th><th>Entrypoint</th><th>Permissions</th><th>Risk</th><th>Source</th></tr></thead>
+      <thead><tr><th>Name</th><th>Version</th><th>Entrypoint</th><th>Permissions</th><th>Risk</th><th>Source</th><th></th></tr></thead>
       <tbody>
       {% for t in tools %}
         <tr>
@@ -21,18 +21,64 @@
           <td>{{ t.get('permissions', []) | join(', ') }}</td>
           <td><span class="badge {% if t.get('risk_level') == 'high' %}danger{% elif t.get('risk_level') == 'medium' %}warn{% else %}ok{% endif %}">{{ t.get('risk_level') }}</span></td>
           <td class="faint">{{ t.get('package_source') }}</td>
+          <td>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/tools/catalog/tools">
+                  <input type="hidden" name="name" value="{{ t.get('name') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Version</label><input name="version" value="{{ t.get('version') }}" required></div>
+                    <div class="field"><label>Risk</label>
+                      <select name="risk_level">
+                        {% for level in ['low','medium','high'] %}
+                        <option value="{{ level }}" {% if t.get('risk_level') == level %}selected{% endif %}>{{ level }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="field"><label>Package source</label><input name="package_source" value="{{ t.get('package_source') }}" required></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="field"><label>Entrypoint</label><input name="entrypoint" value="{{ t.get('entrypoint') }}" required></div>
+                    <div class="field"><label>Permissions</label><input name="permissions" value="{{ t.get('permissions', []) | join(', ') }}"></div>
+                  </div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/tools/catalog/tools/{{ t.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete tool?');">
+                  <button class="btn sm danger" type="submit">Delete tool</button>
+                </form>
+              </div>
+            </details>
+          </td>
         </tr>
-      {% else %}<tr><td colspan="6" class="empty">No tools</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="7" class="empty">No tools</td></tr>{% endfor %}
       </tbody>
     </table>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <form method="post" action="{{ prefix }}/tools/catalog/tools">
+      <div class="form-row cols-3">
+        <div class="field"><label>Name</label><input name="name" required></div>
+        <div class="field"><label>Version</label><input name="version" value="1.0" required></div>
+        <div class="field"><label>Risk</label>
+          <select name="risk_level"><option>low</option><option>medium</option><option>high</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Entrypoint</label><input name="entrypoint" required placeholder="corvus.tools.echo:run"></div>
+        <div class="field"><label>Package source</label><input name="package_source" value="builtin" required></div>
+        <div class="field"><label>Permissions</label><input name="permissions" placeholder="none"></div>
+      </div>
+      <button class="btn primary" type="submit">Save tool</button>
+    </form>
   </div>
 </div>
 
 <div class="section" id="skills">
-  <h2>Skills <span class="badge read-only">read-only</span></h2>
+  <h2>Skills <span class="badge edit">edit</span></h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Name</th><th>Version</th><th>Runtime Dependencies</th><th>Exposed Schemas</th><th>Source</th></tr></thead>
+      <thead><tr><th>Name</th><th>Version</th><th>Runtime Dependencies</th><th>Exposed Schemas</th><th>Source</th><th></th></tr></thead>
       <tbody>
       {% for s in skills %}
         <tr>
@@ -41,41 +87,119 @@
           <td class="mono">{{ s.get('runtime_dependencies', []) | join(', ') }}</td>
           <td>{{ s.get('exposed_tool_schemas', []) | join(', ') or '-' }}</td>
           <td class="faint">{{ s.get('package_source') }}</td>
+          <td>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/tools/catalog/skills">
+                  <input type="hidden" name="name" value="{{ s.get('name') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Version</label><input name="version" value="{{ s.get('version') }}" required></div>
+                    <div class="field"><label>Package source</label><input name="package_source" value="{{ s.get('package_source') }}" required></div>
+                  </div>
+                  <div class="form-row">
+                    <div class="field"><label>Runtime dependencies</label><input name="runtime_dependencies" value="{{ s.get('runtime_dependencies', []) | join(', ') }}"></div>
+                    <div class="field"><label>Exposed tool schemas</label><input name="exposed_tool_schemas" value="{{ s.get('exposed_tool_schemas', []) | join(', ') }}"></div>
+                  </div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/tools/catalog/skills/{{ s.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete skill?');">
+                  <button class="btn sm danger" type="submit">Delete skill</button>
+                </form>
+              </div>
+            </details>
+          </td>
         </tr>
-      {% else %}<tr><td colspan="5" class="empty">No skills</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="6" class="empty">No skills</td></tr>{% endfor %}
       </tbody>
     </table>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <form method="post" action="{{ prefix }}/tools/catalog/skills">
+      <div class="form-row cols-3">
+        <div class="field"><label>Name</label><input name="name" required></div>
+        <div class="field"><label>Version</label><input name="version" value="1.0" required></div>
+        <div class="field"><label>Package source</label><input name="package_source" value="builtin" required></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Runtime dependencies</label><input name="runtime_dependencies" placeholder="python>=3.12"></div>
+        <div class="field"><label>Exposed tool schemas</label><input name="exposed_tool_schemas" placeholder="echo"></div>
+      </div>
+      <button class="btn primary" type="submit">Save skill</button>
+    </form>
   </div>
 </div>
 
 <div class="section" id="workspaces">
-  <h2>Workspaces <span class="badge read-only">read-only</span></h2>
+  <h2>Workspaces <span class="badge edit">edit</span></h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Source</th><th>Mount Path</th><th>Mode</th><th>Allowed Agents</th><th>Retention</th></tr></thead>
+      <thead><tr><th>ID</th><th>Source</th><th>Mount Path</th><th>Mode</th><th>Allowed Agents</th><th>Retention</th><th></th></tr></thead>
       <tbody>
       {% for w in workspaces %}
         <tr>
           <td><strong>{{ w.get('id') }}</strong></td>
           <td class="mono">{{ w.get('source') }}</td>
           <td class="mono">{{ w.get('mount_path') }}</td>
-          <td><span class="badge {{ 'warn' if w.get('mount_mode') == 'rw' else 'read-only' }}">{{ w.get('mount_mode') }}</span></td>
+          <td><span class="badge {{ 'warn' if w.get('mount_mode') == 'rw' else 'muted' }}">{{ w.get('mount_mode') }}</span></td>
           <td>{{ w.get('allowed_agents', []) | join(', ') }}</td>
           <td class="faint">{{ w.get('retention_policy') }}</td>
+          <td>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/tools/catalog/workspaces">
+                  <input type="hidden" name="id" value="{{ w.get('id') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Source</label><input name="source" value="{{ w.get('source') }}" required></div>
+                    <div class="field"><label>Mount path</label><input name="mount_path" value="{{ w.get('mount_path') }}" required></div>
+                    <div class="field"><label>Mode</label>
+                      <select name="mount_mode">
+                        <option value="ro" {% if w.get('mount_mode') == 'ro' %}selected{% endif %}>ro</option>
+                        <option value="rw" {% if w.get('mount_mode') == 'rw' %}selected{% endif %}>rw</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="field"><label>Allowed agents</label><input name="allowed_agents" value="{{ w.get('allowed_agents', []) | join(', ') }}"></div>
+                    <div class="field"><label>Retention</label><input name="retention_policy" value="{{ w.get('retention_policy') }}"></div>
+                  </div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/tools/catalog/workspaces/{{ w.get('id') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete workspace?');">
+                  <button class="btn sm danger" type="submit">Delete workspace</button>
+                </form>
+              </div>
+            </details>
+          </td>
         </tr>
-      {% else %}<tr><td colspan="6" class="empty">No workspaces</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="7" class="empty">No workspaces</td></tr>{% endfor %}
       </tbody>
     </table>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <form method="post" action="{{ prefix }}/tools/catalog/workspaces">
+      <div class="form-row cols-3">
+        <div class="field"><label>ID</label><input name="id" required></div>
+        <div class="field"><label>Source</label><input name="source" required placeholder="/srv/corvus/workspaces/x"></div>
+        <div class="field"><label>Mount path</label><input name="mount_path" value="/workspace" required></div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field"><label>Mode</label><select name="mount_mode"><option>ro</option><option>rw</option></select></div>
+        <div class="field"><label>Allowed agents</label><input name="allowed_agents" value="*"></div>
+        <div class="field"><label>Retention</label><input name="retention_policy" value="ephemeral"></div>
+      </div>
+      <button class="btn primary" type="submit">Save workspace</button>
+    </form>
   </div>
 </div>
 
 <div class="section" id="exec-policy">
-  <h2>Tool Execution Policy <span class="badge read-only">read-only</span></h2>
+  <h2>Tool Execution Policy <span class="badge informational">informational</span></h2>
   <div class="card">
     <div class="kv">
       <dt>Local mode (default)</dt><dd>LLM tool_calls executed in the agent VM by Engine 1 after server RBAC; gateway filters tools_schema to the manifest allowlist.</dd>
       <dt>Hybrid mode (opt-in)</dt><dd>manifest engine3.tool_execution_mode: hybrid + provider_tools; provider registry must set hosted_tools_allowed. Requires admin role.</dd>
-      <dt>Runtime env</dt><dd class="mono">CORVUS_LLM_LOCAL_TOOLS</dd>
     </div>
   </div>
 </div>

@@ -9,7 +9,7 @@
 </div>
 
 <div class="section" id="rules">
-  <h2>RBAC Rules <span class="badge edit">edit</span> <span class="badge read-only">{{ rules | length }}</span></h2>
+  <h2>RBAC Rules <span class="badge edit">edit</span> <span class="badge info">{{ rules | length }}</span></h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Priority</th><th>Effect</th><th>Action</th><th>Manage</th></tr></thead>
@@ -130,31 +130,43 @@
   <h2>Elevations <span class="badge edit">edit</span></h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Status</th><th>Agent</th><th>Created</th><th>Decision</th></tr></thead>
+      <thead><tr><th>ID</th><th>Status</th><th>Agent</th><th>Context</th><th>Created</th><th>Decision</th></tr></thead>
       <tbody>
       {% for e in elevations %}
         <tr>
           <td class="mono">{{ (e.get('id') or '')[:8] }}</td>
           <td><span class="badge {% if e.get('status') == 'approved' %}ok{% elif e.get('status') in ['denied','expired'] %}danger{% else %}warn{% endif %}">{{ e.get('status') }}</span></td>
           <td>{{ e.get('agent_id') or e.get('source', {}).get('agent_id', '-') }}</td>
+          <td class="faint">
+            {{ e.get('action') or e.get('operation') or e.get('reason') or '-' }}
+            {% if e.get('details') %}<details class="inline"><summary>details</summary><div class="body"><pre class="code">{{ e.get('details') | tojson(indent=2) }}</pre></div></details>{% endif %}
+          </td>
           <td class="faint">{{ (e.get('created_at') or '')[:19] }}</td>
           <td>
             {% if e.get('status') == 'pending' %}
-            <div class="btn-row">
-              <form method="post" action="{{ prefix }}/security/elevations/{{ e.get('id') }}/approve" style="display:flex;gap:5px;align-items:center;">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <form method="post" action="{{ prefix }}/security/elevations/{{ e.get('id') }}/approve" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
                 <input name="approver_user_id" placeholder="approver" value="{{ current_user or 'admin-user' }}" style="width:110px;" required>
                 <input name="pin" type="password" placeholder="pin" style="width:80px;" autocomplete="off">
+                <input name="password" type="password" placeholder="password" style="width:100px;" autocomplete="off">
+                <input name="grant_subject_agent" placeholder="grant subject" style="width:110px;">
+                <input name="grant_target_agent" placeholder="grant target" style="width:110px;">
+                <input name="grant_namespace" placeholder="namespace" style="width:110px;">
+                <input name="grant_permissions" placeholder="read,write" style="width:100px;">
+                <input name="grant_expires_at" placeholder="expires ISO" style="width:140px;">
                 <button class="btn sm primary" type="submit">Approve</button>
               </form>
               <form method="post" action="{{ prefix }}/security/elevations/{{ e.get('id') }}/deny" style="display:flex;gap:5px;align-items:center;">
-                <input name="approver_user_id" type="hidden" value="{{ current_user or 'admin-user' }}">
+                <input name="approver_user_id" placeholder="approver" value="{{ current_user or 'admin-user' }}" style="width:110px;" required>
+                <input name="pin" type="password" placeholder="pin" style="width:80px;" autocomplete="off">
+                <input name="password" type="password" placeholder="password" style="width:100px;" autocomplete="off">
                 <button class="btn sm danger" type="submit">Deny</button>
               </form>
             </div>
             {% else %}<span class="faint">—</span>{% endif %}
           </td>
         </tr>
-      {% else %}<tr><td colspan="5" class="empty">No elevations</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="6" class="empty">No elevations</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>
@@ -189,18 +201,21 @@
 </div>
 
 <div class="section" id="behavioral">
-  <h2>Behavioral Monitoring <span class="badge read-only">read-only</span></h2>
+  <h2>Behavioral Monitoring <span class="badge edit">edit</span></h2>
   <div class="card">
-    <div class="kv">
-      <dt>Grant-denial window (min)</dt><dd>{{ behavioral.grant_denial_window_minutes }}</dd>
-      <dt>Grant-denial threshold</dt><dd>{{ behavioral.grant_denial_threshold }}</dd>
-      <dt>Cross-agent window (min)</dt><dd>{{ behavioral.cross_agent_window_minutes }}</dd>
-      <dt>Cross-agent threshold</dt><dd>{{ behavioral.cross_agent_threshold }}</dd>
-      <dt>Rate baseline (min)</dt><dd>{{ behavioral.rate_baseline_minutes }}</dd>
-      <dt>Rate z-score threshold</dt><dd>{{ behavioral.rate_zscore_threshold }}</dd>
-      <dt>Counter retention (h)</dt><dd>{{ behavioral.counter_retention_hours }}</dd>
-    </div>
-    <p class="help">Thresholds are set via <span class="mono">CORVUS_BEHAVIORAL_*</span> on the server and feed live policy facts.</p>
+    <form method="post" action="{{ prefix }}/settings/patch">
+      <input type="hidden" name="return_to" value="/security#behavioral">
+      {% for s in behavioral_settings %}
+      <div class="field">
+        <label>{{ s.key }}{% if s.restart_required %} <span class="badge warn">restart_required</span>{% endif %}</label>
+        <input name="setting_{{ s.key }}" value="{{ s.value }}">
+      </div>
+      {% else %}
+      <p class="muted">No behavioral settings seeded.</p>
+      {% endfor %}
+      <button class="btn primary" type="submit">Save behavioral thresholds</button>
+    </form>
+    <p class="help">DB-backed thresholds feed live policy facts. Env break-glass vars win when explicitly set.</p>
   </div>
 </div>
 {% endblock %}

@@ -17,7 +17,7 @@ from corvus.memory.models import (
     MemoryWrite,
 )
 from corvus.protocol import FrameworkMessage
-from corvus.server.catalog import DEFAULT_CATALOG
+from corvus.server.catalog import DEFAULT_CATALOG, CapabilityCatalog
 from corvus.server.db import Database
 
 
@@ -29,11 +29,20 @@ class MemoryService:
         *,
         encryption_enabled: bool = False,
         master_key: str | None = None,
+        catalog: CapabilityCatalog | None = None,
     ) -> None:
         self.db = db
         self.audit = audit
         self.encryption_enabled = encryption_enabled
         self.master_key = master_key
+        self._catalog = catalog
+
+    @property
+    def catalog(self) -> CapabilityCatalog:
+        return self._catalog if self._catalog is not None else DEFAULT_CATALOG
+
+    def bind_catalog(self, catalog: CapabilityCatalog) -> None:
+        self._catalog = catalog
 
     async def handle(
         self,
@@ -358,7 +367,7 @@ class MemoryService:
                 reason="target agent not found",
                 grant_id=grant_id,
             )
-        if namespace not in DEFAULT_CATALOG.memory_namespaces:
+        if namespace not in self.catalog.memory_namespaces:
             return await self._failure(
                 message,
                 target_agent_id=target_agent_id,
@@ -414,7 +423,7 @@ class MemoryService:
                 "max_record_bytes": override["max_record_bytes"],
                 "default_ttl_seconds": override["default_ttl_seconds"],
             }
-        template = DEFAULT_CATALOG.memory_namespaces[namespace]
+        template = self.catalog.memory_namespaces[namespace]
         return template.quota.model_dump(mode="json")
 
     async def _failure(

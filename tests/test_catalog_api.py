@@ -20,5 +20,5 @@ async def test_llm_providers_strip_credential_ref(app_ctx):
         for entry in providers:
             assert "provider_id" in entry
             assert "supported_models" in entry
+            assert "api_base_url" in entry
             assert "credential_ref" not in entry
-            assert "api_base_url" not in entry

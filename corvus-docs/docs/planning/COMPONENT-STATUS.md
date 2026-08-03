@@ -20,9 +20,9 @@
 | Agent Workflow Rules        | Current                 | Elevation + behavioral workflow sections finalized |
 | Corvus Node                 | Implemented — Current     | IPC contract, routing, error catalog |
 | Memory Architecture         | Phase 5.2 Implemented   | SQLite + sqlite-vec semantic search, key/list/delete, quota enforcement, TTL sweeper, elevation auto-replay, offline pending replay queue |
-| Management API              | Phase 6 Implemented     | Rules, agents, health, Prometheus metrics, OpenAPI `/docs` + export |
-| LLM Gateway                 | Phase 7.2+ Implemented  | Server-side proxy, streaming (local tool_calls + hybrid hosted tools), local/hybrid tool policy, provider registry |
-| Operator Console            | Phase 8 Implemented     | Sidebar-driven server-rendered GUI on the Management API; presentation layer reusing `/v1` endpoints |
+| Management API              | Phase 9 Implemented     | Agents/users/groups PATCH; catalog CRUD; `/v1/settings`; health/metrics/audit |
+| LLM Gateway                 | Phase 7.2+ Implemented  | Server-side proxy, streaming (local tool_calls + hybrid hosted tools), local/hybrid tool policy, provider registry (SQLite + reload) |
+| Operator Console            | Phase 9 Implemented     | Sidebar GUI; catalogs/settings/providers editable (DB-backed); informational surfaces remain read-only |
 
 **Phase 1 (Architecture & Design): Complete.**
 
@@ -32,8 +32,8 @@
 |-----------------------|-------------|-------|
 | Corvus Server         | Phase 2 Done (multi-VM session routing hardened) | AF_VSOCK/TCP gateway, handshake, routing, RBAC v1, audit; session binding + all server-initiated delivery and offline replay scoped to `(agent_id, vm_id)` so multiple VMs of one agent no longer collide |
 | corvus.protocol       | Phase 2 Done| Pydantic models, NDJSON codec, error catalog |
-| Management API        | Phase 6 Done | agents, rules, simulate, audit, health, `/v1/metrics`, OpenAPI |
-| Operator Console      | Phase 8 Done | `/ui` sidebar GUI (Jinja2 + HTMX + Alpine, vendored); in-process `/v1` reuse; signed-cookie login |
+| Management API        | Phase 9 Done | agents/users/groups CRUD+PATCH, catalog writes, `/v1/settings`, rules, simulate, audit, health, `/v1/metrics`, OpenAPI |
+| Operator Console      | Phase 9 Done | `/ui` sidebar GUI; DB-backed catalogs/settings/providers editable; secrets redacted; restart_required bind knobs |
 | Fake Node client      | Phase 2 Done| `corvus-fake-node` CLI for integration testing |
 | Corvus Node           | Phase 3 Stabilized| IPC socket, validation, handshake, routing, reconnect, `corvus-node` CLI |
 | Agent Runtime         | Phase 4.1 Implemented (turn-abort hardened) | Loop + 4 engines; Engine 4 memory client during COLLECT; Engine 3 server LLM client; terminal `ABORTED` phase + bounded engine waits + loop-authoritative `--once` teardown so stalled/failed turns never hang; `corvus-loop`, `corvus-engine`, `corvus-runtime` |
@@ -70,6 +70,8 @@
 
 **Phase 7.2+ Gate:** Streaming coexists with hybrid provider-hosted tools; gateway forwards registry-approved hosted tools on stream requests; stub/OpenAI adapters and `finalize_stream` record `provider_tools_used` / `trust_boundary` with hybrid audit parity.
 
-**Phase 8 Gate:** Operator console at `/ui` renders every sidebar category; login gates all pages via signed cookie; API-mutable resources are editable through the console (reusing `/v1` validation + audit) and env-only settings are surfaced read-only; System page redacts secrets; 17 UI tests plus full-suite green.
+**Phase 8 Gate:** Operator console at `/ui` renders every sidebar category; login gates all pages via signed cookie; API-mutable resources are editable through the console (reusing `/v1` validation + audit); System page redacts secrets; 17 UI tests plus full-suite green.
+
+**Phase 9 Gate:** DB-backed catalogs + runtime settings + LLM provider registry editable via GUI/`/v1`; env/YAML bootstrap + break-glass only; bind host/port/transport marked restart_required (no UI auto-restart); health/metrics/audit bodies/resolved manifest remain informational.
 
 **Black Rain Labs - Research & Development Division**

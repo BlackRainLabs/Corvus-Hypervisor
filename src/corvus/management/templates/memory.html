@@ -8,11 +8,11 @@
 </div>
 
 <div class="section" id="namespaces">
-  <h2>Namespace Catalog <span class="badge read-only">read-only</span></h2>
+  <h2>Namespace Catalog <span class="badge edit">edit</span></h2>
   <p class="help">Per-agent quota overrides are edited under each agent's detail page.</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Namespace</th><th>Retention Policy</th><th>max_records</th><th>max_record_bytes</th><th>default_ttl_seconds</th></tr></thead>
+      <thead><tr><th>Namespace</th><th>Retention Policy</th><th>max_records</th><th>max_record_bytes</th><th>default_ttl_seconds</th><th></th></tr></thead>
       <tbody>
       {% for n in namespaces %}
         {% set q = n.get('quota', {}) %}
@@ -22,32 +22,80 @@
           <td>{{ q.get('max_records') }}</td>
           <td>{{ q.get('max_record_bytes') }}</td>
           <td>{{ q.get('default_ttl_seconds') if q.get('default_ttl_seconds') is not none else '-' }}</td>
+          <td>
+            <details class="inline">
+              <summary>Edit / Delete</summary>
+              <div class="body">
+                <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces">
+                  <input type="hidden" name="name" value="{{ n.get('name') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Retention policy</label><input name="retention_policy" value="{{ n.get('retention_policy') }}"></div>
+                    <div class="field"><label>max_records</label><input name="max_records" type="number" value="{{ q.get('max_records') or 1000 }}"></div>
+                    <div class="field"><label>max_record_bytes</label><input name="max_record_bytes" type="number" value="{{ q.get('max_record_bytes') or 65536 }}"></div>
+                  </div>
+                  <div class="field"><label>default_ttl_seconds</label><input name="default_ttl_seconds" type="number" value="{{ q.get('default_ttl_seconds') or '' }}" placeholder="optional"></div>
+                  <button class="btn sm primary" type="submit">Save changes</button>
+                </form>
+                <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces/{{ n.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete namespace template?');">
+                  <button class="btn sm danger" type="submit">Delete namespace</button>
+                </form>
+              </div>
+            </details>
+          </td>
         </tr>
-      {% else %}<tr><td colspan="5" class="empty">No namespaces</td></tr>{% endfor %}
+      {% else %}<tr><td colspan="6" class="empty">No namespaces</td></tr>{% endfor %}
       </tbody>
     </table>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces">
+      <div class="form-row cols-3">
+        <div class="field"><label>Name</label><input name="name" required placeholder="shared-knowledge"></div>
+        <div class="field"><label>Retention policy</label><input name="retention_policy" value="agent-private"></div>
+        <div class="field"><label>max_records</label><input name="max_records" type="number" value="1000"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>max_record_bytes</label><input name="max_record_bytes" type="number" value="65536"></div>
+        <div class="field"><label>default_ttl_seconds</label><input name="default_ttl_seconds" type="number" placeholder="optional"></div>
+      </div>
+      <button class="btn primary" type="submit">Save namespace</button>
+    </form>
   </div>
 </div>
 
 <div class="section" id="sweeper">
-  <h2>Retention Sweeper <span class="badge read-only">read-only</span></h2>
+  <h2>Retention Sweeper <span class="badge edit">edit</span></h2>
   <div class="card">
     <div class="kv">
-      <dt>Status</dt><dd><span class="dot {{ 'ok' if settings.sweeper_running else 'danger' }}"></span> {{ 'running' if settings.sweeper_running else 'stopped' }}</dd>
-      <dt>Sweep interval (s)</dt><dd>{{ settings.sweep_interval_seconds }}</dd>
-      <dt>Soft-delete retention (h)</dt><dd>{{ settings.soft_delete_retention_hours }}</dd>
-      <dt>Writes daily limit</dt><dd>{{ settings.writes_daily_limit }}</dd>
+      <dt>Status</dt><dd><span class="dot {{ 'ok' if settings.sweeper_running else 'danger' }}"></span> {{ 'running' if settings.sweeper_running else 'stopped' }} <span class="badge informational">informational</span></dd>
     </div>
+    <form method="post" action="{{ prefix }}/settings/patch">
+      <input type="hidden" name="return_to" value="/memory">
+      {% for s in memory_settings if s.key.startswith('memory_sweep') or s.key.startswith('memory_soft') or s.key == 'memory_writes_daily_limit' %}
+      <div class="form-row">
+        <div class="field"><label>{{ s.key }}</label><input name="setting_{{ s.key }}" value="{{ s.value }}"></div>
+      </div>
+      {% endfor %}
+      <button class="btn primary" type="submit">Save sweeper settings</button>
+    </form>
   </div>
 </div>
 
 <div class="section" id="encryption">
-  <h2>Encryption at Rest <span class="badge read-only">read-only</span></h2>
+  <h2>Encryption at Rest <span class="badge edit">edit</span></h2>
   <div class="card">
-    <div class="kv">
-      <dt>Status</dt><dd><span class="badge {{ 'ok' if settings.encryption_enabled else 'read-only' }}">{{ 'enabled (AES-GCM)' if settings.encryption_enabled else 'disabled' }}</span></dd>
-    </div>
-    <p class="help">Toggle via <span class="mono">CORVUS_MEMORY_ENCRYPTION</span> + <span class="mono">CORVUS_MASTER_KEY</span> on the server.</p>
+    <form method="post" action="{{ prefix }}/settings/patch">
+      <input type="hidden" name="return_to" value="/memory">
+      {% for s in memory_settings if s.key in ['memory_encryption_enabled', 'memory_master_key'] %}
+      <div class="form-row">
+        <div class="field">
+          <label>{{ s.key }}{% if s.secret %} <span class="badge danger">secret</span>{% endif %}</label>
+          <input name="setting_{{ s.key }}" value="{{ '' if s.secret else s.value }}" placeholder="{{ '********' if s.secret else '' }}">
+        </div>
+      </div>
+      {% endfor %}
+      <button class="btn primary" type="submit">Save encryption settings</button>
+    </form>
   </div>
 </div>
 {% endblock %}

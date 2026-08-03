@@ -173,6 +173,29 @@ class Database:
             );
             CREATE INDEX IF NOT EXISTS idx_behavioral_counters_agent_signal
                 ON behavioral_counters (agent_id, signal, window_start);
+            CREATE TABLE IF NOT EXISTS groups (
+                id TEXT PRIMARY KEY,
+                parent_group TEXT,
+                inherited_rules INTEGER NOT NULL DEFAULT 1,
+                rule_ids_json TEXT NOT NULL,
+                members_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS catalog_entries (
+                kind TEXT NOT NULL,
+                entry_id TEXT NOT NULL,
+                entry_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (kind, entry_id)
+            );
+            CREATE TABLE IF NOT EXISTS server_settings (
+                key TEXT PRIMARY KEY,
+                value_json TEXT NOT NULL,
+                secret INTEGER NOT NULL DEFAULT 0,
+                restart_required INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL
+            );
             """
         )
         await self._migrate_audit_log()
@@ -341,6 +364,240 @@ class Database:
             {"id": row["id"], "role": row["role"], **json.loads(row["profile_json"])}
             for row in rows
         ]
+
+    async def deactivate_user(self, user_id: str) -> bool:
+        user = await self.get_user(user_id)
+        if user is None:
+            return False
+        role = user.pop("role")
+        user_id_val = user.pop("id")
+        user["active"] = False
+        await self.upsert_user(user_id_val, role, user)
+        return True
+
+    async def patch_user(self, user_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+        user = await self.get_user(user_id)
+        if user is None:
+            return None
+        role = updates.pop("role", user["role"])
+        profile = {k: v for k, v in user.items() if k not in {"id", "role"}}
+        for key, value in updates.items():
+            if value is not None:
+                profile[key] = value
+        await self.upsert_user(user_id, role, profile)
+        return await self.get_user(user_id)
+
+    async def list_groups(self) -> list[dict[str, Any]]:
+        cursor = await self.conn.execute(
+            """
+            SELECT id, parent_group, inherited_rules, rule_ids_json, members_json,
+                   created_at, updated_at
+            FROM groups ORDER BY id
+            """
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "id": row["id"],
+                "parent_group": row["parent_group"],
+                "inherited_rules": bool(row["inherited_rules"]),
+                "rule_ids": json.loads(row["rule_ids_json"]),
+                "members": json.loads(row["members_json"]),
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            }
+            for row in rows
+        ]
+
+    async def get_group(self, group_id: str) -> dict[str, Any] | None:
+        cursor = await self.conn.execute(
+            """
+            SELECT id, parent_group, inherited_rules, rule_ids_json, members_json,
+                   created_at, updated_at
+            FROM groups WHERE id = ?
+            """,
+            (group_id,),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+        return {
+            "id": row["id"],
+            "parent_group": row["parent_group"],
+            "inherited_rules": bool(row["inherited_rules"]),
+            "rule_ids": json.loads(row["rule_ids_json"]),
+            "members": json.loads(row["members_json"]),
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"],
+        }
+
+    async def upsert_group(
+        self,
+        group_id: str,
+        *,
+        parent_group: str | None = None,
+        inherited_rules: bool = True,
+        rule_ids: list[str] | None = None,
+        members: list[str] | None = None,
+    ) -> dict[str, Any]:
+        now = datetime.now(UTC).isoformat()
+        existing = await self.get_group(group_id)
+        rule_ids = rule_ids if rule_ids is not None else (existing["rule_ids"] if existing else [])
+        members = members if members is not None else (existing["members"] if existing else [])
+        if existing is None:
+            await self.conn.execute(
+                """
+                INSERT INTO groups (
+                    id, parent_group, inherited_rules, rule_ids_json,
+                    members_json, created_at, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    group_id,
+                    parent_group,
+                    1 if inherited_rules else 0,
+                    json.dumps(rule_ids, sort_keys=True),
+                    json.dumps(members, sort_keys=True),
+                    now,
+                    now,
+                ),
+            )
+        else:
+            await self.conn.execute(
+                """
+                UPDATE groups
+                SET parent_group=?, inherited_rules=?, rule_ids_json=?,
+                    members_json=?, updated_at=?
+                WHERE id=?
+                """,
+                (
+                    parent_group if parent_group is not None else existing["parent_group"],
+                    1 if inherited_rules else 0,
+                    json.dumps(rule_ids, sort_keys=True),
+                    json.dumps(members, sort_keys=True),
+                    now,
+                    group_id,
+                ),
+            )
+        await self.conn.commit()
+        group = await self.get_group(group_id)
+        assert group is not None
+        return group
+
+    async def delete_group(self, group_id: str) -> bool:
+        cursor = await self.conn.execute("DELETE FROM groups WHERE id = ?", (group_id,))
+        await self.conn.commit()
+        return cursor.rowcount > 0
+
+    async def list_catalog_entries(self, kind: str) -> list[dict[str, Any]]:
+        cursor = await self.conn.execute(
+            "SELECT entry_id, entry_json FROM catalog_entries WHERE kind = ? ORDER BY entry_id",
+            (kind,),
+        )
+        rows = await cursor.fetchall()
+        return [json.loads(row["entry_json"]) for row in rows]
+
+    async def get_catalog_entry(self, kind: str, entry_id: str) -> dict[str, Any] | None:
+        cursor = await self.conn.execute(
+            "SELECT entry_json FROM catalog_entries WHERE kind = ? AND entry_id = ?",
+            (kind, entry_id),
+        )
+        row = await cursor.fetchone()
+        return json.loads(row["entry_json"]) if row else None
+
+    async def upsert_catalog_entry(self, kind: str, entry_id: str, entry: dict[str, Any]) -> None:
+        now = datetime.now(UTC).isoformat()
+        await self.conn.execute(
+            """
+            INSERT INTO catalog_entries (kind, entry_id, entry_json, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(kind, entry_id) DO UPDATE SET
+                entry_json=excluded.entry_json,
+                updated_at=excluded.updated_at
+            """,
+            (kind, entry_id, json.dumps(entry, sort_keys=True), now),
+        )
+        await self.conn.commit()
+
+    async def delete_catalog_entry(self, kind: str, entry_id: str) -> bool:
+        cursor = await self.conn.execute(
+            "DELETE FROM catalog_entries WHERE kind = ? AND entry_id = ?",
+            (kind, entry_id),
+        )
+        await self.conn.commit()
+        return cursor.rowcount > 0
+
+    async def catalog_kind_empty(self, kind: str) -> bool:
+        cursor = await self.conn.execute(
+            "SELECT 1 FROM catalog_entries WHERE kind = ? LIMIT 1", (kind,)
+        )
+        return await cursor.fetchone() is None
+
+    async def get_setting(self, key: str) -> dict[str, Any] | None:
+        cursor = await self.conn.execute(
+            """
+            SELECT key, value_json, secret, restart_required, updated_at
+            FROM server_settings WHERE key = ?
+            """,
+            (key,),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+        return {
+            "key": row["key"],
+            "value": json.loads(row["value_json"]),
+            "secret": bool(row["secret"]),
+            "restart_required": bool(row["restart_required"]),
+            "updated_at": row["updated_at"],
+        }
+
+    async def list_settings(self) -> list[dict[str, Any]]:
+        cursor = await self.conn.execute(
+            """
+            SELECT key, value_json, secret, restart_required, updated_at
+            FROM server_settings ORDER BY key
+            """
+        )
+        rows = await cursor.fetchall()
+        return [
+            {
+                "key": row["key"],
+                "value": json.loads(row["value_json"]),
+                "secret": bool(row["secret"]),
+                "restart_required": bool(row["restart_required"]),
+                "updated_at": row["updated_at"],
+            }
+            for row in rows
+        ]
+
+    async def upsert_setting(
+        self,
+        key: str,
+        value: Any,
+        *,
+        secret: bool = False,
+        restart_required: bool = False,
+    ) -> None:
+        now = datetime.now(UTC).isoformat()
+        await self.conn.execute(
+            """
+            INSERT INTO server_settings (key, value_json, secret, restart_required, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                value_json=excluded.value_json,
+                secret=excluded.secret,
+                restart_required=excluded.restart_required,
+                updated_at=excluded.updated_at
+            """,
+            (key, json.dumps(value), 1 if secret else 0, 1 if restart_required else 0, now),
+        )
+        await self.conn.commit()
+
+    async def settings_empty(self) -> bool:
+        cursor = await self.conn.execute("SELECT 1 FROM server_settings LIMIT 1")
+        return await cursor.fetchone() is None
 
     async def verify_user_secret(self, user_id: str, secret: str) -> bool:
         user = await self.get_user(user_id)

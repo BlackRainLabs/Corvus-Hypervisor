@@ -21,6 +21,10 @@
         <div class="field"><label>Grant ID</label><input name="grant_id" value="{{ filters.grant_id }}"></div>
         <div class="field"><label>Elevation ID</label><input name="elevation_id" value="{{ filters.elevation_id }}"></div>
       </div>
+      <div class="form-row">
+        <div class="field"><label>From (ISO time)</label><input name="from" value="{{ filters.from }}" placeholder="2026-08-01T00:00:00"></div>
+        <div class="field"><label>To (ISO time)</label><input name="to" value="{{ filters.to }}" placeholder="2026-08-02T23:59:59"></div>
+      </div>
       <div class="btn-row">
         <button class="btn primary" type="submit">Apply filters</button>
         <a class="btn" href="{{ prefix }}/audit">Reset</a>

@@ -25,14 +25,27 @@ class ProviderConfig:
             provider_id=self.provider_id,
             supported_models=list(self.supported_models),
             credential_ref=self.credential_ref,
+            api_base_url=self.api_base_url,
             quota_class="dev",
             hosted_tools_allowed=self.hosted_tools_allowed,
             allowed_hosted_tools=list(self.allowed_hosted_tools),
         )
 
+    @classmethod
+    def from_catalog_entry(cls, entry: LLMProviderCatalogEntry) -> ProviderConfig:
+        return cls(
+            provider_id=entry.provider_id,
+            api_base_url=entry.api_base_url,
+            credential_ref=entry.credential_ref,
+            supported_models=list(entry.supported_models),
+            hosted_tools_allowed=entry.hosted_tools_allowed,
+            allowed_hosted_tools=list(entry.allowed_hosted_tools),
+        )
+
     def public_payload(self) -> dict[str, Any]:
         return {
             "provider_id": self.provider_id,
+            "api_base_url": self.api_base_url,
             "supported_models": list(self.supported_models),
             "hosted_tools_allowed": self.hosted_tools_allowed,
             "allowed_hosted_tools": list(self.allowed_hosted_tools),

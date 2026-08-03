@@ -8,28 +8,53 @@
 </div>
 
 <div class="section" id="health">
-  <h2>Health <span class="badge read-only">read-only</span></h2>
+  <h2>Health <span class="badge informational">informational</span></h2>
   {% include "partials/health_tiles.html" %}
 </div>
 
 <div class="section" id="metrics">
-  <h2>Prometheus Metrics <span class="badge read-only">read-only</span></h2>
+  <h2>Prometheus Metrics <span class="badge informational">informational</span></h2>
   <pre class="code">{{ metrics_text or 'metrics unavailable' }}</pre>
   <p class="help">Scrape endpoint: <span class="mono">GET /v1/metrics</span>. OpenAPI docs: <a href="/docs" target="_blank">/docs</a>.</p>
 </div>
 
 <div class="section" id="config">
-  <h2>Server Configuration <span class="badge read-only">read-only</span></h2>
-  <p class="help">Secrets are redacted. Values come from environment / config files on the server.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Setting</th><th>Value</th></tr></thead>
-      <tbody>
-      {% for row in config_rows %}
-        <tr><td class="mono">{{ row.name }}</td><td class="mono faint">{{ row.value }}</td></tr>
+  <h2>Server Configuration <span class="badge edit">edit</span></h2>
+  <p class="help">DB-backed settings (env wins if set as break-glass). Secrets are write-only. Bind host/port/transport require operator restart of <span class="mono">corvus-server</span> — the UI does not auto-kill the process.</p>
+  <div class="card">
+    <form method="post" action="{{ prefix }}/settings/patch">
+      <input type="hidden" name="return_to" value="/system">
+      {% for group, rows in settings_groups.items() %}
+        <h3>{{ group }}</h3>
+        {% for s in rows %}
+        <div class="form-row">
+          <div class="field">
+            <label class="mono">{{ s.key }}
+              {% if s.restart_required %}<span class="badge warn">restart_required</span>{% endif %}
+              {% if s.secret %}<span class="badge danger">secret</span>{% endif %}
+            </label>
+            <input name="setting_{{ s.key }}" value="{{ '' if s.secret else s.value }}" placeholder="{{ '********' if s.secret else '' }}">
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">No settings seeded yet.</p>
       {% endfor %}
-      </tbody>
-    </table>
+      <button class="btn primary" type="submit">Save settings</button>
+    </form>
   </div>
+  <details style="margin-top:16px;">
+    <summary>Process env snapshot (informational)</summary>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+        {% for row in config_rows %}
+          <tr><td class="mono">{{ row.name }}</td><td class="mono faint">{{ row.value }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
 </div>
 {% endblock %}
