@@ -82,6 +82,10 @@ SETTING_HELP: dict[str, str] = {
 
 PAGE_LEADS: dict[str, str] = {
     "summary": "Live hypervisor health, pending elevations, and recent audit events.",
+    "chat": (
+        "Talk to an agent's allowed LLM through the server gateway. "
+        "The built-in stub provider echoes your message; dummy-http needs the local dummy API."
+    ),
     "agents": (
         "Register, launch, and stop agent microVMs. "
         "Capabilities are selected at create time from server catalogs."
@@ -330,6 +334,25 @@ def datetime_local_to_iso(value: str | None) -> str:
     if len(text) == 16:
         return f"{text}:00"
     return text
+
+
+def chat_agent_options(agents: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Compact agent rows for the operator chat page (id, status, Engine 3 allowlists)."""
+    options: list[dict[str, Any]] = []
+    for agent in agents or []:
+        summary = engine_summary(agent.get("manifest") if isinstance(agent, dict) else None)
+        agent_id = str(agent.get("id") or "")
+        if not agent_id:
+            continue
+        options.append(
+            {
+                "id": agent_id,
+                "status": str(agent.get("status") or "stopped"),
+                "providers": summary["providers"] or ["stub"],
+                "models": summary["models"] or ["stub-v1"],
+            }
+        )
+    return options
 
 
 def fleet_counts(agents: list[dict[str, Any]] | None) -> dict[str, int]:

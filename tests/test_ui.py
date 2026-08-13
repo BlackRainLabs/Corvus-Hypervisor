@@ -13,6 +13,7 @@ from corvus.management.ui_client import (
     verify_session,
 )
 from corvus.management.ui_copy import (
+    chat_agent_options,
     engine_summary,
     humanize_key,
     quota_label,
@@ -61,6 +62,12 @@ def test_ui_copy_helpers():
     )
     assert summary["tools"] == ["echo"]
     assert summary["tool_execution_mode"] == "local"
+    options = chat_agent_options(
+        [{"id": "a1", "status": "stopped", "manifest": {"engines": {"engine3": {}}}}]
+    )
+    assert options == [
+        {"id": "a1", "status": "stopped", "providers": ["stub"], "models": ["stub-v1"]}
+    ]
 
 
 def test_session_cookie_roundtrip():
@@ -125,6 +132,7 @@ async def test_all_nav_routes_render(app_ctx):
         await _login(client)
         for path, marker in [
             ("/ui/", "Overview"),
+            ("/ui/chat", "LLM gateway playground"),
             ("/ui/agents", "All Agents"),
             ("/ui/tools", "Tools &amp; Skills"),
             ("/ui/inference", "LLM Providers"),
@@ -137,6 +145,31 @@ async def test_all_nav_routes_render(app_ctx):
             resp = await client.get(path)
             assert resp.status_code == 200, path
             assert marker in resp.text, path
+
+
+@pytest.mark.asyncio
+async def test_chat_page_and_stub_reply(app_ctx):
+    app = create_app(app_ctx)
+    async with _client(app) as client:
+        await _login(client)
+        page = await client.get("/ui/chat")
+        assert page.status_code == 200
+        assert 'value="test-agent-01"' in page.text
+        assert "Ask the test LLM" in page.text
+        sent = await client.post(
+            "/ui/chat/send",
+            json={
+                "agent_id": "test-agent-01",
+                "provider": "stub",
+                "model": "stub-v1",
+                "messages": [{"role": "user", "content": "hello from console"}],
+            },
+        )
+        assert sent.status_code == 200
+        body = sent.json()
+        assert body["success"] is True
+        assert body["provider"] == "stub"
+        assert "hello from console" in body["reply"]
 
 
 @pytest.mark.asyncio

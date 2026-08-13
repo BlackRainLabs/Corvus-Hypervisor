@@ -10,6 +10,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from corvus.management.chat import OperatorChatError, run_operator_chat
 from corvus.management.rate_limit import SlidingWindowRateLimiter
 from corvus.policy.models import IdentityAlias, PolicyRule
 from corvus.protocol import (
@@ -132,6 +133,18 @@ class SimulateMessage(BaseModel):
 class SimulateRequest(BaseModel):
     message: SimulateMessage
     context: dict[str, Any] = Field(default_factory=dict)
+
+
+class ChatTurnMessage(BaseModel):
+    role: str
+    content: str
+
+
+class AgentChatRequest(BaseModel):
+    messages: list[ChatTurnMessage] = Field(min_length=1)
+    provider: str | None = None
+    model: str | None = None
+    user_id: str | None = None
 
 
 def create_app(ctx: AppContext) -> FastAPI:
@@ -650,6 +663,27 @@ def create_app(ctx: AppContext) -> FastAPI:
             details={"agent_id": agent_id, "vm_instance_id": record.vm_instance_id},
         )
         return _vm_payload(stopped)
+
+    @app.post("/v1/agents/{agent_id}/chat")
+    async def agent_chat(
+        agent_id: str,
+        body: AgentChatRequest,
+        _: None = Depends(require_api_key),
+    ) -> dict[str, Any]:
+        try:
+            return await run_operator_chat(
+                ctx,
+                agent_id=agent_id,
+                messages=[message.model_dump() for message in body.messages],
+                provider=body.provider,
+                model=body.model,
+                user_id=body.user_id,
+            )
+        except OperatorChatError as exc:
+            raise HTTPException(
+                status_code=exc.status_code,
+                detail=_error(exc.code, exc.message, exc.details),
+            ) from exc
 
     @app.get("/v1/rules")
     async def list_rules(_: None = Depends(require_api_key)) -> dict[str, Any]:

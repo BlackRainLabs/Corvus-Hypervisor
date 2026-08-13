@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
+{% block title %}Chat — Corvus Hypervisor{% endblock %}
+{% block heading %}Chat{% endblock %}
+{% block topmeta %}LLM gateway playground{% endblock %}
+{% block content %}
+{{ page_lead(page_leads.chat) }}
+
+{% if not chat_agents %}
+{{ empty_state('No agents registered', href=prefix + '/agents#create-agent', link_text='Create an agent') }}
+{% else %}
+<div class="chat-shell"
+     x-data="corvusChat({{ {'agents': chat_agents, 'prefix': prefix} | tojson }})"
+     x-init="init()">
+  <aside class="card chat-sidebar">
+    <h2>Session {{ section_hint('editable') }}</h2>
+    <div class="field">
+      <label for="chat-agent">Agent</label>
+      <select id="chat-agent" x-model="agentId" @change="onAgentChange()">
+        {% for agent in chat_agents %}
+        <option value="{{ agent.id }}">{{ agent.id }} · {{ agent.status }}</option>
+        {% endfor %}
+      </select>
+      <div class="help">Registered agents. Chat uses the server LLM gateway — a running microVM is not required.</div>
+    </div>
+    <div class="field">
+      <label>Provider</label>
+      <div class="chips">
+        <template x-for="item in currentAgent().providers" :key="'p-' + item">
+          <button type="button" class="chip" :class="{ active: provider === item }"
+                  @click="provider = item" x-text="item"></button>
+        </template>
+      </div>
+      <div class="help">Must be allowed by this agent's Engine 3 manifest.</div>
+    </div>
+    <div class="field">
+      <label>Model</label>
+      <div class="chips">
+        <template x-for="item in currentAgent().models" :key="'m-' + item">
+          <button type="button" class="chip" :class="{ active: model === item }"
+                  @click="model = item" x-text="item"></button>
+        </template>
+      </div>
+    </div>
+    <p class="help">Seeded <span class="mono">test-agent-01</span> uses the in-process <span class="mono">stub</span> provider. <span class="mono">dummy-http</span> / <span class="mono">dummy-v1</span> works when those ids are on the manifest; <code>make dev-up</code> starts that API on port 8765.</p>
+    <div class="btn-row">
+      <button class="btn sm" type="button" @click="clear()">Clear transcript</button>
+    </div>
+  </aside>
+
+  <section class="card chat-main">
+    <div class="chat-transcript" x-ref="transcript">
+      <template x-if="messages.length === 0">
+        <div class="empty">Send a message. The test LLM will reply through the Corvus gateway.</div>
+      </template>
+      <template x-for="(msg, index) in messages" :key="index">
+        <div class="chat-bubble" :class="msg.role + (msg.error ? ' error' : '')">
+          <div class="chat-meta" x-text="msg.role"></div>
+          <div class="chat-text" x-text="msg.content"></div>
+        </div>
+      </template>
+      <div class="chat-bubble assistant muted" x-show="sending">
+        <div class="chat-meta">assistant</div>
+        <div class="chat-text">Thinking…</div>
+      </div>
+    </div>
+    <p class="help chat-error" x-show="error" x-text="error"></p>
+    <form class="chat-composer" @submit.prevent="send()">
+      <textarea id="chat-input"
+                x-model="input"
+                rows="2"
+                placeholder="Ask the test LLM…"
+                :disabled="sending"
+                @keydown.enter.prevent="if (!$event.shiftKey) send()"></textarea>
+      <button class="btn primary" type="submit" :disabled="sending || !input.trim()">Send</button>
+    </form>
+  </section>
+</div>
+<script>
+function corvusChat(cfg) {
+  const agents = cfg.agents || [];
+  return {
+    agents,
+    prefix: cfg.prefix || "/ui",
+    agentId: agents[0] ? agents[0].id : "",
+    provider: "",
+    model: "",
+    input: "",
+    sending: false,
+    error: "",
+    messages: [],
+    init() {
+      this.syncProviderModel();
+      this.loadHistory();
+      this.$nextTick(() => this.scroll());
+    },
+    currentAgent() {
+      return this.agents.find((agent) => agent.id === this.agentId) || {
+        id: this.agentId,
+        providers: ["stub"],
+        models: ["stub-v1"],
+        status: "stopped",
+      };
+    },
+    storageKey() {
+      return "corvus-chat:" + this.agentId;
+    },
+    syncProviderModel() {
+      const agent = this.currentAgent();
+      if (!agent.providers.includes(this.provider)) {
+        this.provider = agent.providers[0] || "stub";
+      }
+      if (!agent.models.includes(this.model)) {
+        this.model = agent.models[0] || "stub-v1";
+      }
+    },
+    loadHistory() {
+      try {
+        this.messages = JSON.parse(localStorage.getItem(this.storageKey()) || "[]");
+      } catch (_err) {
+        this.messages = [];
+      }
+    },
+    saveHistory() {
+      localStorage.setItem(this.storageKey(), JSON.stringify(this.messages));
+    },
+    onAgentChange() {
+      this.error = "";
+      this.syncProviderModel();
+      this.loadHistory();
+      this.$nextTick(() => this.scroll());
+    },
+    clear() {
+      this.messages = [];
+      this.error = "";
+      this.saveHistory();
+    },
+    scroll() {
+      const el = this.$refs.transcript;
+      if (el) el.scrollTop = el.scrollHeight;
+    },
+    async send() {
+      const text = (this.input || "").trim();
+      if (!text || this.sending || !this.agentId) return;
+      this.error = "";
+      this.input = "";
+      this.messages.push({ role: "user", content: text });
+      this.saveHistory();
+      this.sending = true;
+      this.$nextTick(() => this.scroll());
+      try {
+        const resp = await fetch(this.prefix + "/chat/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            agent_id: this.agentId,
+            provider: this.provider,
+            model: this.model,
+            messages: this.messages.filter((msg) => !msg.error),
+          }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.success === false) {
+          const err =
+            data.error ||
+            (data.detail && (data.detail.message || data.detail.code)) ||
+            "Chat failed";
+          this.error = err;
+          this.messages.push({ role: "assistant", content: err, error: true });
+        } else {
+          this.messages.push({ role: "assistant", content: data.reply || "" });
+        }
+        this.saveHistory();
+      } catch (err) {
+        this.error = String(err);
+      } finally {
+        this.sending = false;
+        this.$nextTick(() => this.scroll());
+      }
+    },
+  };
+}
+</script>
+{% endif %}
+{% endblock %}

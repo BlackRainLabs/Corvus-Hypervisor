@@ -20,9 +20,9 @@
 | Agent Workflow Rules        | Current                 | Elevation + behavioral workflow sections finalized |
 | Corvus Node                 | Implemented — Current     | IPC contract, routing, error catalog |
 | Memory Architecture         | Phase 5.2 Implemented   | SQLite + sqlite-vec semantic search, key/list/delete, quota enforcement, TTL sweeper, elevation auto-replay, offline pending replay queue |
-| Management API              | Phase 9 Implemented     | Agents/users/groups PATCH; catalog CRUD; `/v1/settings`; health/metrics/audit |
+| Management API              | Phase 9.6 Implemented   | Agents/users/groups PATCH; catalog CRUD; `/v1/settings`; `/v1/agents/{id}/chat`; health/metrics/audit |
 | LLM Gateway                 | Phase 7.2+ Implemented  | Server-side proxy, streaming (local tool_calls + hybrid hosted tools), local/hybrid tool policy, provider registry (SQLite + reload) |
-| Operator Console            | Phase 9.5 Implemented   | Sidebar GUI; catalogs/settings/providers editable (DB-backed); operator UX polish; informational surfaces remain read-only |
+| Operator Console            | Phase 9.6 Implemented   | Sidebar GUI + Chat playground; catalogs/settings/providers editable (DB-backed); operator UX polish; informational surfaces remain read-only |
 
 **Phase 1 (Architecture & Design): Complete.**
 
@@ -32,8 +32,8 @@
 |-----------------------|-------------|-------|
 | Corvus Server         | Phase 2 Done (multi-VM session routing hardened) | AF_VSOCK/TCP gateway, handshake, routing, RBAC v1, audit; session binding + all server-initiated delivery and offline replay scoped to `(agent_id, vm_id)` so multiple VMs of one agent no longer collide |
 | corvus.protocol       | Phase 2 Done| Pydantic models, NDJSON codec, error catalog |
-| Management API        | Phase 9 Done | agents/users/groups CRUD+PATCH, catalog writes, `/v1/settings`, rules, simulate, audit, health, `/v1/metrics`, OpenAPI |
-| Operator Console      | Phase 9.5 Done | `/ui` sidebar GUI; DB-backed catalogs/settings/providers editable; operator UX polish; secrets redacted; restart_required bind knobs |
+| Management API        | Phase 9.6 Done | agents/users/groups CRUD+PATCH, catalog writes, `/v1/settings`, `/v1/agents/{id}/chat`, rules, simulate, audit, health, `/v1/metrics`, OpenAPI |
+| Operator Console      | Phase 9.6 Done | `/ui` sidebar GUI + Chat; DB-backed catalogs/settings/providers editable; operator UX polish; secrets redacted; restart_required bind knobs |
 | Fake Node client      | Phase 2 Done| `corvus-fake-node` CLI for integration testing |
 | Corvus Node           | Phase 3 Stabilized| IPC socket, validation, handshake, routing, reconnect, `corvus-node` CLI |
 | Agent Runtime         | Phase 4.1 Implemented (turn-abort hardened) | Loop + 4 engines; Engine 4 memory client during COLLECT; Engine 3 server LLM client; terminal `ABORTED` phase + bounded engine waits + loop-authoritative `--once` teardown so stalled/failed turns never hang; `corvus-loop`, `corvus-engine`, `corvus-runtime` |
@@ -75,5 +75,7 @@
 **Phase 9 Gate:** DB-backed catalogs + runtime settings + LLM provider registry editable via GUI/`/v1`; env/YAML bootstrap + break-glass only; bind host/port/transport marked restart_required (no UI auto-restart); health/metrics/audit bodies/resolved manifest remain informational.
 
 **Phase 9.5 Gate:** Operator Console pages use human labels, confirmations, catalog dropdowns, and hash-tab highlighting; JSON editors remain the day-2 control surface; login/docs describe username + PIN/password.
+
+**Phase 9.6 Gate:** Operator Chat at `/ui/chat` uses `POST /v1/agents/{id}/chat` through the LLM gateway (stub/dummy test providers); `make dev-up` starts dummy LLM; Engine 2 `CORVUS_CHAT_TEXT` for runtime turns.
 
 **Black Rain Labs - Research & Development Division**

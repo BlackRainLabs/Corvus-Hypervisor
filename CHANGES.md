@@ -4,6 +4,25 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-13] - Operator chat + runnable test LLM
+
+**Documents Modified:**
+- `src/corvus/management/chat.py` (new), `api.py`, `ui.py`, `ui_client.py`, `ui_copy.py`
+- `src/corvus/management/templates/chat.html` (new), `summary.html`, `corvus.css`
+- `src/corvus/runtime/engines/engine2.py`, `tools/dev-stack.sh`, `tools/corvus.env.example`
+- `tests/test_management.py`, `tests/test_ui.py`
+- README, OPERATIONS, MANAGEMENT-API, PHASES, ROADMAP, COMPONENT-STATUS
+
+**Key Changes:**
+- Operator Console **Chat** page talks to an agent's allowed LLM through `POST /v1/agents/{id}/chat` (gateway + audit + token quotas; text-only, no tool/memory bypass).
+- Seeded `test-agent-01` / `stub` echoes the operator message; `make dev-up` also starts `corvus-dummy-llm` on `:8765` for `dummy-http`.
+- Engine 2 honors `CORVUS_CHAT_TEXT` on `make run-turn`. Sign-in: `admin-user` / `0000`.
+- Chat agent dropdown is server-rendered (Alpine `<template>` inside `<select>` left the list empty in the browser).
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-13] - Phase 9.5: Operator Console UX polish
 
 **Documents Modified:**

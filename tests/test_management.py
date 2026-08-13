@@ -3,7 +3,10 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from corvus.llm.dummy_server import DEFAULT_SUCCESS_MESSAGE, DummyLlmServer
+from corvus.llm.registry import ProviderConfig
 from corvus.management.api import create_app
+from corvus.server.bootstrap import TEST_AGENT_ID
 
 
 @pytest.mark.asyncio
@@ -400,3 +403,78 @@ async def test_elevation_approval_requires_admin_or_privilege(app_ctx):
         )
         assert approved.status_code == 200
         assert approved.json()["status"] == "approved"
+
+
+@pytest.mark.asyncio
+async def test_agent_chat_stub_echoes_user_text(app_ctx):
+    app = create_app(app_ctx)
+    headers = {"X-API-Key": app_ctx.config.api_key}
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            f"/v1/agents/{TEST_AGENT_ID}/chat",
+            headers=headers,
+            json={"messages": [{"role": "user", "content": "hello stub"}]},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["success"] is True
+        assert body["provider"] == "stub"
+        assert body["model"] == "stub-v1"
+        assert "hello stub" in body["reply"]
+        assert body["correlation_id"]
+
+        missing = await client.post(
+            "/v1/agents/does-not-exist/chat",
+            headers=headers,
+            json={"messages": [{"role": "user", "content": "hi"}]},
+        )
+        assert missing.status_code == 404
+        assert missing.json()["detail"]["code"] == "AGENT_NOT_FOUND"
+
+        denied = await client.post(
+            f"/v1/agents/{TEST_AGENT_ID}/chat",
+            headers=headers,
+            json={
+                "messages": [{"role": "user", "content": "hi"}],
+                "provider": "openai",
+                "model": "gpt-4",
+            },
+        )
+        assert denied.status_code == 403
+        assert denied.json()["detail"]["code"] == "LLM_PROVIDER_NOT_ALLOWED"
+
+
+@pytest.mark.asyncio
+async def test_agent_chat_dummy_http(app_ctx, full_manifest_agent):
+    dummy = app_ctx.llm.registry.get("dummy-http")
+    assert dummy is not None
+    app = create_app(app_ctx)
+    headers = {"X-API-Key": app_ctx.config.api_key}
+    transport = ASGITransport(app=app)
+
+    async with DummyLlmServer() as dummy_llm, AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        app_ctx.llm.registry.providers["dummy-http"] = ProviderConfig(
+            provider_id="dummy-http",
+            api_base_url=dummy_llm.base_url,
+            credential_ref="none",
+            supported_models=["dummy-v1"],
+        )
+        resp = await client.post(
+            f"/v1/agents/{TEST_AGENT_ID}/chat",
+            headers=headers,
+            json={
+                "messages": [{"role": "user", "content": "ping dummy"}],
+                "provider": "dummy-http",
+                "model": "dummy-v1",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["success"] is True
+        assert body["provider"] == "dummy-http"
+        assert DEFAULT_SUCCESS_MESSAGE in body["reply"]
+        assert "ping dummy" in body["reply"]
