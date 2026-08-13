@@ -128,7 +128,6 @@ def session_user_id(token: str | None) -> str | None:
 class NavSub:
     label: str
     anchor: str
-    badge: str = ""  # "edit" | "read-only" | ""
 
 
 @dataclass(frozen=True)
@@ -136,84 +135,92 @@ class NavItem:
     id: str
     label: str
     path: str  # appended to the UI path prefix, e.g. "/agents"
+    mark: str = ""
     subs: tuple[NavSub, ...] = field(default_factory=tuple)
 
 
 NAV: tuple[NavItem, ...] = (
-    NavItem("summary", "Overview", "/"),
+    NavItem("summary", "Overview", "/", mark="OV"),
     NavItem(
         "agents",
         "Agents",
         "/agents",
+        mark="AG",
         subs=(
-            NavSub("All Agents", "#all-agents", "edit"),
-            NavSub("Create Agent", "#create-agent", "edit"),
+            NavSub("All Agents", "#all-agents"),
+            NavSub("Create Agent", "#create-agent"),
         ),
     ),
     NavItem(
         "tools",
         "Tools & Skills",
         "/tools",
+        mark="TS",
         subs=(
-            NavSub("Tools", "#tools", "edit"),
-            NavSub("Skills", "#skills", "edit"),
-            NavSub("Workspaces", "#workspaces", "edit"),
-            NavSub("Execution Policy", "#exec-policy", "informational"),
+            NavSub("Tools", "#tools"),
+            NavSub("Skills", "#skills"),
+            NavSub("Workspaces", "#workspaces"),
+            NavSub("Execution Policy", "#exec-policy"),
         ),
     ),
     NavItem(
         "inference",
         "Inference",
         "/inference",
+        mark="IN",
         subs=(
-            NavSub("Providers", "#providers", "edit"),
-            NavSub("Token Quotas", "#token-quotas", "edit"),
-            NavSub("Runtime Settings", "#runtime-settings", "edit"),
+            NavSub("Providers", "#providers"),
+            NavSub("Token Quotas", "#token-quotas"),
+            NavSub("Runtime Settings", "#runtime-settings"),
         ),
     ),
     NavItem(
         "memory",
         "Memory",
         "/memory",
+        mark="ME",
         subs=(
-            NavSub("Namespaces", "#namespaces", "edit"),
-            NavSub("Retention Sweeper", "#sweeper", "edit"),
-            NavSub("Encryption", "#encryption", "edit"),
+            NavSub("Namespaces", "#namespaces"),
+            NavSub("Retention Sweeper", "#sweeper"),
+            NavSub("Encryption", "#encryption"),
         ),
     ),
     NavItem(
         "users",
         "Users & Access",
         "/users",
+        mark="US",
         subs=(
-            NavSub("Users", "#users", "edit"),
-            NavSub("Create User", "#create-user", "edit"),
-            NavSub("Roles & Privileges", "#roles", "informational"),
-            NavSub("Groups", "#groups", "edit"),
+            NavSub("Users", "#users"),
+            NavSub("Create User", "#create-user"),
+            NavSub("Roles & Privileges", "#roles"),
+            NavSub("Groups", "#groups"),
         ),
     ),
     NavItem(
         "security",
         "Security",
         "/security",
+        mark="SE",
         subs=(
-            NavSub("RBAC Rules", "#rules", "edit"),
-            NavSub("Rule Simulator", "#simulator", "edit"),
-            NavSub("Grants", "#grants", "edit"),
-            NavSub("Elevations", "#elevations", "edit"),
-            NavSub("Quotas & Limits", "#quotas", "edit"),
-            NavSub("Behavioral Monitoring", "#behavioral", "edit"),
+            NavSub("RBAC Rules", "#rules"),
+            NavSub("Rule Simulator", "#simulator"),
+            NavSub("Grants", "#grants"),
+            NavSub("Elevations", "#elevations"),
+            NavSub("Quotas & Limits", "#quotas"),
+            NavSub("Behavioral Monitoring", "#behavioral"),
         ),
     ),
-    NavItem("audit", "Audit", "/audit"),
+    NavItem("audit", "Audit", "/audit", mark="AU"),
     NavItem(
         "system",
         "System",
         "/system",
+        mark="SY",
         subs=(
-            NavSub("Health", "#health", "informational"),
-            NavSub("Metrics", "#metrics", "informational"),
-            NavSub("Configuration", "#config", "edit"),
+            NavSub("Health", "#health"),
+            NavSub("Metrics", "#metrics"),
+            NavSub("Configuration", "#config"),
         ),
     ),
 )

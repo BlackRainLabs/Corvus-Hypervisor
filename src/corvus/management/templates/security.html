@@ -1,25 +1,35 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, setting_row, empty_state %}
 {% block title %}Security — Corvus Hypervisor{% endblock %}
 {% block heading %}Security{% endblock %}
 {% block topmeta %}RBAC · grants · elevations{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.security) }}
 <div class="tabs">
-  <a href="#rules">Rules</a><a href="#simulator">Simulator</a><a href="#grants">Grants</a>
-  <a href="#elevations">Elevations</a><a href="#quotas">Quotas</a><a href="#behavioral">Behavioral</a>
+  <a href="#rules" :class="{ 'active': hash === '#rules' || hash === '' }">Rules</a>
+  <a href="#simulator" :class="{ 'active': hash === '#simulator' }">Simulator</a>
+  <a href="#grants" :class="{ 'active': hash === '#grants' }">Grants</a>
+  <a href="#elevations" :class="{ 'active': hash === '#elevations' }">Elevations</a>
+  <a href="#quotas" :class="{ 'active': hash === '#quotas' }">Quotas</a>
+  <a href="#behavioral" :class="{ 'active': hash === '#behavioral' }">Behavioral</a>
 </div>
 
 <div class="section" id="rules">
-  <h2>RBAC Rules <span class="badge edit">edit</span> <span class="badge info">{{ rules | length }}</span></h2>
+  <h2>RBAC Rules {{ section_hint('editable') }} <span class="badge info">{{ rules | length }}</span></h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Priority</th><th>Effect</th><th>Action</th><th>Manage</th></tr></thead>
+      <thead><tr><th>ID</th><th>Priority</th><th>Effect</th><th>Subject</th><th>Action</th><th>Else</th><th>Manage</th></tr></thead>
       <tbody>
-      {% for r in rules %}
+      {% for row in rules %}
+        {% set r = row.get('rule') or {} %}
+        {% set sum = row.get('summary') or {} %}
         <tr>
           <td class="mono">{{ r.get('id') }}</td>
           <td>{{ r.get('priority') }}</td>
           <td><span class="badge {{ 'ok' if r.get('effect') == 'allow' else ('danger' if r.get('effect') == 'deny' else 'warn') }}">{{ r.get('effect') }}</span></td>
-          <td class="faint mono">{{ r.get('action', {}).get('type') if r.get('action') else '-' }}</td>
+          <td class="faint">{{ sum.get('roles') or '-' }}{% if sum.get('agents') and sum.get('agents') != '-' %} · {{ sum.get('agents') }}{% endif %}</td>
+          <td class="faint mono">{{ sum.get('action') or '-' }}</td>
+          <td class="faint">{{ sum.get('else') or '-' }}</td>
           <td>
             <details class="inline">
               <summary>Edit / Delete</summary>
@@ -30,14 +40,16 @@
                     <button class="btn sm primary" type="submit">Save changes</button>
                   </div>
                 </form>
-                <form method="post" action="{{ prefix }}/security/rules/{{ r.get('id') }}/delete" style="margin-top:6px;">
+                <form method="post" action="{{ prefix }}/security/rules/{{ r.get('id') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete rule {{ r.get('id') }}?');">
                   <button class="btn sm danger" type="submit">Delete rule</button>
                 </form>
               </div>
             </details>
           </td>
         </tr>
-      {% else %}<tr><td colspan="5" class="empty">No rules</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="7">{{ empty_state('No rules') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
@@ -61,18 +73,24 @@
 </div>
 
 <div class="section" id="simulator">
-  <h2>Rule Simulator <span class="badge edit">dry-run</span></h2>
+  <h2>Rule Simulator {{ section_hint('dry-run') }}</h2>
   <div class="grid cols-2">
     <div class="card">
       <form hx-post="{{ prefix }}/security/simulate" hx-target="#sim-result" hx-swap="innerHTML">
         <div class="form-row">
-          <div class="field"><label>Agent ID</label><input name="agent_id" value="test-agent-01" required></div>
+          <div class="field"><label>Agent ID</label>
+            <input name="agent_id" list="sim-agents" value="{{ agent_ids[0] if agent_ids else 'test-agent-01' }}" required>
+            <datalist id="sim-agents">{% for aid in agent_ids %}<option value="{{ aid }}"></option>{% endfor %}</datalist>
+          </div>
           <div class="field"><label>Engine</label>
             <select name="engine"><option>engine1</option><option>engine2</option><option selected>engine3</option><option>engine4</option></select>
           </div>
         </div>
         <div class="form-row">
-          <div class="field"><label>Message Type</label><input name="msg_type" value="memory:query" required></div>
+          <div class="field"><label>Message Type</label>
+            <input name="msg_type" list="sim-msg-types" value="memory:query" required>
+            <datalist id="sim-msg-types">{% for t in message_types %}<option value="{{ t }}"></option>{% endfor %}</datalist>
+          </div>
           <div class="field"><label>Triggered By</label><input name="triggered_by" value="agent_initiated"></div>
         </div>
         <div class="field"><label>Scope</label><input name="scope" value="local"></div>
@@ -86,22 +104,24 @@
 </div>
 
 <div class="section" id="grants">
-  <h2>Memory Grants <span class="badge edit">edit</span></h2>
+  <h2>Memory Grants {{ section_hint('editable') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Subject</th><th>Target</th><th>Namespace</th><th>Permissions</th><th>Expires</th><th></th></tr></thead>
       <tbody>
       {% for g in grants %}
         <tr>
-          <td class="mono">{{ (g.get('id') or '')[:8] }}</td>
+          <td class="mono" title="{{ g.get('id') }}">{{ (g.get('id') or '')[:8] }}</td>
           <td>{{ g.get('subject_agent') }}</td>
           <td>{{ g.get('target_agent') }}</td>
           <td>{{ g.get('namespace') }}</td>
           <td class="faint">{{ g.get('permissions', []) | join(', ') }}</td>
           <td class="faint">{{ (g.get('expires_at') or '')[:19] or 'never' }}</td>
-          <td><form method="post" action="{{ prefix }}/security/grants/{{ g.get('id') }}/revoke"><button class="btn sm danger" type="submit">Revoke</button></form></td>
+          <td><form method="post" action="{{ prefix }}/security/grants/{{ g.get('id') }}/revoke" onsubmit="return confirm('Revoke this grant?');"><button class="btn sm danger" type="submit">Revoke</button></form></td>
         </tr>
-      {% else %}<tr><td colspan="7" class="empty">No grants</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="7">{{ empty_state('No grants') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
@@ -110,9 +130,24 @@
     <div class="body">
       <form method="post" action="{{ prefix }}/security/grants/create">
         <div class="form-row cols-3">
-          <div class="field"><label>Subject Agent</label><input name="subject_agent" required></div>
-          <div class="field"><label>Target Agent</label><input name="target_agent" required></div>
-          <div class="field"><label>Namespace</label><input name="namespace" value="shared-knowledge" required></div>
+          <div class="field"><label>Subject Agent</label>
+            <select name="subject_agent" required>
+              <option value="">Select…</option>
+              {% for aid in agent_ids %}<option value="{{ aid }}">{{ aid }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field"><label>Target Agent</label>
+            <select name="target_agent" required>
+              <option value="">Select…</option>
+              {% for aid in agent_ids %}<option value="{{ aid }}">{{ aid }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="field"><label>Namespace</label>
+            <select name="namespace" required>
+              <option value="">Select…</option>
+              {% for ns in namespace_ids %}<option value="{{ ns }}" {% if ns == 'shared-knowledge' %}selected{% endif %}>{{ ns }}</option>{% endfor %}
+            </select>
+          </div>
         </div>
         <div class="form-row">
           <div class="field"><label>Permissions</label>
@@ -127,14 +162,14 @@
 </div>
 
 <div class="section" id="elevations">
-  <h2>Elevations <span class="badge edit">edit</span></h2>
+  <h2>Elevations {{ section_hint('editable') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Status</th><th>Agent</th><th>Context</th><th>Created</th><th>Decision</th></tr></thead>
       <tbody>
       {% for e in elevations %}
         <tr>
-          <td class="mono">{{ (e.get('id') or '')[:8] }}</td>
+          <td class="mono" title="{{ e.get('id') }}">{{ (e.get('id') or '')[:8] }}</td>
           <td><span class="badge {% if e.get('status') == 'approved' %}ok{% elif e.get('status') in ['denied','expired'] %}danger{% else %}warn{% endif %}">{{ e.get('status') }}</span></td>
           <td>{{ e.get('agent_id') or e.get('source', {}).get('agent_id', '-') }}</td>
           <td class="faint">
@@ -144,43 +179,77 @@
           <td class="faint">{{ (e.get('created_at') or '')[:19] }}</td>
           <td>
             {% if e.get('status') == 'pending' %}
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <form method="post" action="{{ prefix }}/security/elevations/{{ e.get('id') }}/approve" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
-                <input name="approver_user_id" placeholder="approver" value="{{ current_user or 'admin-user' }}" style="width:110px;" required>
-                <input name="pin" type="password" placeholder="pin" style="width:80px;" autocomplete="off">
-                <input name="password" type="password" placeholder="password" style="width:100px;" autocomplete="off">
-                <input name="grant_subject_agent" placeholder="grant subject" style="width:110px;">
-                <input name="grant_target_agent" placeholder="grant target" style="width:110px;">
-                <input name="grant_namespace" placeholder="namespace" style="width:110px;">
-                <input name="grant_permissions" placeholder="read,write" style="width:100px;">
-                <input name="grant_expires_at" placeholder="expires ISO" style="width:140px;">
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <form method="post" action="{{ prefix }}/security/elevations/{{ e.get('id') }}/approve" onsubmit="return confirm('Approve this elevation?');">
+                <div class="form-row cols-3">
+                  <div class="field"><label>Approver</label>
+                    <input name="approver_user_id" list="elev-users" value="{{ current_user or 'admin-user' }}" required>
+                    <datalist id="elev-users">{% for uid in user_ids %}<option value="{{ uid }}"></option>{% endfor %}</datalist>
+                  </div>
+                  <div class="field"><label>PIN</label><input name="pin" type="password" autocomplete="off"></div>
+                  <div class="field"><label>Password</label><input name="password" type="password" autocomplete="off"></div>
+                </div>
+                <details class="inline">
+                  <summary>Create grant on approve (optional)</summary>
+                  <div class="body">
+                    <div class="form-row cols-3">
+                      <div class="field"><label>Grant subject</label>
+                        <select name="grant_subject_agent">
+                          <option value=""></option>
+                          {% for aid in agent_ids %}<option value="{{ aid }}">{{ aid }}</option>{% endfor %}
+                        </select>
+                      </div>
+                      <div class="field"><label>Grant target</label>
+                        <select name="grant_target_agent">
+                          <option value=""></option>
+                          {% for aid in agent_ids %}<option value="{{ aid }}">{{ aid }}</option>{% endfor %}
+                        </select>
+                      </div>
+                      <div class="field"><label>Namespace</label>
+                        <select name="grant_namespace">
+                          <option value=""></option>
+                          {% for ns in namespace_ids %}<option value="{{ ns }}">{{ ns }}</option>{% endfor %}
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="field"><label>Permissions</label><input name="grant_permissions" placeholder="read,write"></div>
+                      <div class="field"><label>Expires (ISO)</label><input name="grant_expires_at" placeholder="optional"></div>
+                    </div>
+                  </div>
+                </details>
                 <button class="btn sm primary" type="submit">Approve</button>
               </form>
-              <form method="post" action="{{ prefix }}/security/elevations/{{ e.get('id') }}/deny" style="display:flex;gap:5px;align-items:center;">
-                <input name="approver_user_id" placeholder="approver" value="{{ current_user or 'admin-user' }}" style="width:110px;" required>
-                <input name="pin" type="password" placeholder="pin" style="width:80px;" autocomplete="off">
-                <input name="password" type="password" placeholder="password" style="width:100px;" autocomplete="off">
+              <form method="post" action="{{ prefix }}/security/elevations/{{ e.get('id') }}/deny" onsubmit="return confirm('Deny this elevation?');">
+                <div class="form-row cols-3">
+                  <div class="field"><label>Approver</label><input name="approver_user_id" value="{{ current_user or 'admin-user' }}" required></div>
+                  <div class="field"><label>PIN</label><input name="pin" type="password" autocomplete="off"></div>
+                  <div class="field"><label>Password</label><input name="password" type="password" autocomplete="off"></div>
+                </div>
                 <button class="btn sm danger" type="submit">Deny</button>
               </form>
             </div>
             {% else %}<span class="faint">—</span>{% endif %}
           </td>
         </tr>
-      {% else %}<tr><td colspan="6" class="empty">No elevations</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="6">{{ empty_state('No elevations') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="section" id="quotas">
-  <h2>Quotas &amp; Limits <span class="badge edit">edit</span></h2>
+  <h2>Quotas &amp; Limits {{ section_hint('editable') }}</h2>
+  <p class="help"><strong>Used</strong> is a live counter. Changing it resets usage rather than setting a second limit. Elevation webhook URL/secret live under <a href="{{ prefix }}/system#config">System configuration</a>.</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Key</th><th>Used</th><th>Limit</th><th>Window</th><th>Update</th></tr></thead>
+      <thead><tr><th>Quota</th><th>Used</th><th>Limit</th><th>Window</th><th>Update</th></tr></thead>
       <tbody>
       {% for q in quotas %}
         <tr>
-          <td class="mono">{{ q.get('key') }}</td>
+          <td><strong>{{ q.get('key') | quota_label }}</strong><br><span class="mono faint">{{ q.get('key') }}</span></td>
           <td>{{ q.get('used') }}</td>
           <td>{{ q.get('limit') }}</td>
           <td>{{ q.get('window_type') }}</td>
@@ -188,28 +257,27 @@
             <form method="post" action="{{ prefix }}/security/quotas/patch" style="display:flex;gap:6px;align-items:center;">
               <input type="hidden" name="key" value="{{ q.get('key') }}">
               <input type="hidden" name="window_type" value="{{ q.get('window_type') }}">
-              <input name="limit" type="number" value="{{ q.get('limit') }}" style="width:100px;">
-              <input name="used" type="number" value="{{ q.get('used') }}" style="width:90px;">
+              <input name="limit" type="number" value="{{ q.get('limit') }}" style="width:100px;" title="Limit">
+              <input name="used" type="number" value="{{ q.get('used') }}" style="width:90px;" title="Used (counter reset)">
               <button class="btn sm primary" type="submit">Save</button>
             </form>
           </td>
         </tr>
-      {% else %}<tr><td colspan="5" class="empty">No quota counters</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="5">{{ empty_state('No quota counters') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="section" id="behavioral">
-  <h2>Behavioral Monitoring <span class="badge edit">edit</span></h2>
+  <h2>Behavioral Monitoring {{ section_hint('editable') }}</h2>
   <div class="card">
     <form method="post" action="{{ prefix }}/settings/patch">
       <input type="hidden" name="return_to" value="/security#behavioral">
       {% for s in behavioral_settings %}
-      <div class="field">
-        <label>{{ s.key }}{% if s.restart_required %} <span class="badge warn">restart_required</span>{% endif %}</label>
-        <input name="setting_{{ s.key }}" value="{{ s.value }}">
-      </div>
+        {{ setting_row(s) }}
       {% else %}
       <p class="muted">No behavioral settings seeded.</p>
       {% endfor %}

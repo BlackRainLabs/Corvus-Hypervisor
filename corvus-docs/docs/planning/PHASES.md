@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-08-13
 **Related Documents:** CHANGES.md
 **Must Update on Change:** CHANGES.md
 
@@ -169,7 +169,7 @@
 - Zero-build stack: Jinja2 + HTMX (dashboard polling, live rule simulator) + Alpine.js, all vendored (no CDN)
 - Presentation layer only: UI handlers call the server's own `/v1` endpoints in-process (httpx `ASGITransport` + server-held API key), reusing all validation and audit
 - Full read/write for API-mutable resources (agents launch/stop + create, namespace quotas, RBAC rules CRUD + simulator, grants, elevations approve/deny, quotas, users); Phase 8 left remaining knobs env-only (superseded by Phase 9)
-- Signed HttpOnly session cookie login against the Management API key; secrets redacted on the System page; toggles via `CORVUS_UI_ENABLED`, `CORVUS_UI_SESSION_SECRET`, `CORVUS_UI_PATH_PREFIX`
+- Signed HttpOnly session cookie login against admin/operator username + PIN/password; secrets redacted on the System page; toggles via `CORVUS_UI_ENABLED`, `CORVUS_UI_SESSION_SECRET`, `CORVUS_UI_PATH_PREFIX`
 
 ## Phase 9: GUI Full Configurability — Implemented
 - **Product rule:** mutable control-plane state is editable in the GUI; informational/secret/restart_required taxonomy in OPERATIONS.md
@@ -178,5 +178,10 @@
 - **9.2** `PATCH /v1/agents/{id}`, user PATCH/DELETE (deactivate), groups CRUD
 - **9.3** SQLite-backed catalog CRUD + Tools/Memory editors; Memory Service binds live `CatalogStore`
 - **9.4** `server_settings` + `/v1/settings`, LLM provider CRUD/reload, System/Inference/Memory/Security edit forms; bind changes require operator restart (no UI auto-kill)
+
+## Phase 9.5: Operator Console UX polish — Implemented
+- Operator-facing labels, page leads, confirmations, catalog-backed dropdowns, hash-tab highlighting; JSON editors remain primary
+- Sidebar taxonomy badges removed; login/docs match username + PIN/password
+- Agent create applies self launch grants from namespace permissions when launch-grants JSON is empty
 
 **Black Rain Labs - Research & Development Division**

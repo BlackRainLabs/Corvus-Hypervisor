@@ -1,14 +1,19 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
 {% block title %}Tools & Skills — Corvus Hypervisor{% endblock %}
 {% block heading %}Tools &amp; Skills{% endblock %}
 {% block topmeta %}server-owned catalogs{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.tools) }}
 <div class="tabs">
-  <a href="#tools">Tools</a><a href="#skills">Skills</a><a href="#workspaces">Workspaces</a><a href="#exec-policy">Execution Policy</a>
+  <a href="#tools" :class="{ 'active': hash === '#tools' || hash === '' }">Tools</a>
+  <a href="#skills" :class="{ 'active': hash === '#skills' }">Skills</a>
+  <a href="#workspaces" :class="{ 'active': hash === '#workspaces' }">Workspaces</a>
+  <a href="#exec-policy" :class="{ 'active': hash === '#exec-policy' }">Execution Policy</a>
 </div>
 
 <div class="section" id="tools">
-  <h2>Tools <span class="badge edit">edit</span></h2>
+  <h2>Tools {{ section_hint('editable') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Name</th><th>Version</th><th>Entrypoint</th><th>Permissions</th><th>Risk</th><th>Source</th><th></th></tr></thead>
@@ -40,28 +45,31 @@
                   </div>
                   <div class="form-row">
                     <div class="field"><label>Entrypoint</label><input name="entrypoint" value="{{ t.get('entrypoint') }}" required></div>
-                    <div class="field"><label>Permissions</label><input name="permissions" value="{{ t.get('permissions', []) | join(', ') }}"></div>
+                    <div class="field"><label>Permissions</label><input name="permissions" value="{{ t.get('permissions', []) | join(', ') }}"><div class="help">Comma-separated capability tags</div></div>
                   </div>
                   <button class="btn sm primary" type="submit">Save changes</button>
                 </form>
-                <form method="post" action="{{ prefix }}/tools/catalog/tools/{{ t.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete tool?');">
+                <form method="post" action="{{ prefix }}/tools/catalog/tools/{{ t.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete tool {{ t.get('name') }}? Agents that still reference it will fail at launch.');">
                   <button class="btn sm danger" type="submit">Delete tool</button>
                 </form>
               </div>
             </details>
           </td>
         </tr>
-      {% else %}<tr><td colspan="7" class="empty">No tools</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="7">{{ empty_state('No tools in the catalog') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
   <div class="card" style="margin-top:12px;">
+    <h3>Add tool</h3>
     <form method="post" action="{{ prefix }}/tools/catalog/tools">
       <div class="form-row cols-3">
         <div class="field"><label>Name</label><input name="name" required></div>
         <div class="field"><label>Version</label><input name="version" value="1.0" required></div>
         <div class="field"><label>Risk</label>
-          <select name="risk_level"><option>low</option><option>medium</option><option>high</option></select>
+          <select name="risk_level"><option value="low">low</option><option value="medium">medium</option><option value="high">high</option></select>
         </div>
       </div>
       <div class="form-row">
@@ -75,7 +83,7 @@
 </div>
 
 <div class="section" id="skills">
-  <h2>Skills <span class="badge edit">edit</span></h2>
+  <h2>Skills {{ section_hint('editable') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Name</th><th>Version</th><th>Runtime Dependencies</th><th>Exposed Schemas</th><th>Source</th><th></th></tr></thead>
@@ -103,18 +111,21 @@
                   </div>
                   <button class="btn sm primary" type="submit">Save changes</button>
                 </form>
-                <form method="post" action="{{ prefix }}/tools/catalog/skills/{{ s.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete skill?');">
+                <form method="post" action="{{ prefix }}/tools/catalog/skills/{{ s.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete skill {{ s.get('name') }}?');">
                   <button class="btn sm danger" type="submit">Delete skill</button>
                 </form>
               </div>
             </details>
           </td>
         </tr>
-      {% else %}<tr><td colspan="6" class="empty">No skills</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="6">{{ empty_state('No skills in the catalog') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
   <div class="card" style="margin-top:12px;">
+    <h3>Add skill</h3>
     <form method="post" action="{{ prefix }}/tools/catalog/skills">
       <div class="form-row cols-3">
         <div class="field"><label>Name</label><input name="name" required></div>
@@ -131,7 +142,7 @@
 </div>
 
 <div class="section" id="workspaces">
-  <h2>Workspaces <span class="badge edit">edit</span></h2>
+  <h2>Workspaces {{ section_hint('editable') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Source</th><th>Mount Path</th><th>Mode</th><th>Allowed Agents</th><th>Retention</th><th></th></tr></thead>
@@ -155,29 +166,48 @@
                     <div class="field"><label>Mount path</label><input name="mount_path" value="{{ w.get('mount_path') }}" required></div>
                     <div class="field"><label>Mode</label>
                       <select name="mount_mode">
-                        <option value="ro" {% if w.get('mount_mode') == 'ro' %}selected{% endif %}>ro</option>
-                        <option value="rw" {% if w.get('mount_mode') == 'rw' %}selected{% endif %}>rw</option>
+                        <option value="ro" {% if w.get('mount_mode') == 'ro' %}selected{% endif %}>read-only</option>
+                        <option value="rw" {% if w.get('mount_mode') == 'rw' %}selected{% endif %}>read-write</option>
                       </select>
                     </div>
                   </div>
                   <div class="form-row">
-                    <div class="field"><label>Allowed agents</label><input name="allowed_agents" value="{{ w.get('allowed_agents', []) | join(', ') }}"></div>
-                    <div class="field"><label>Retention</label><input name="retention_policy" value="{{ w.get('retention_policy') }}"></div>
+                    <div class="field"><label>Allowed agents</label>
+                      <select name="allowed_agents" multiple>
+                        <option value="*" {% if '*' in w.get('allowed_agents', []) %}selected{% endif %}>* (all)</option>
+                        {% for aid in agent_ids %}
+                        <option value="{{ aid }}" {% if aid in w.get('allowed_agents', []) %}selected{% endif %}>{{ aid }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="field"><label>Retention</label>
+                      <select name="retention_policy">
+                        {% for pol in workspace_retention %}
+                        <option value="{{ pol }}" {% if w.get('retention_policy') == pol %}selected{% endif %}>{{ pol }}</option>
+                        {% endfor %}
+                        {% if w.get('retention_policy') and w.get('retention_policy') not in workspace_retention %}
+                        <option value="{{ w.get('retention_policy') }}" selected>{{ w.get('retention_policy') }} (custom)</option>
+                        {% endif %}
+                      </select>
+                    </div>
                   </div>
                   <button class="btn sm primary" type="submit">Save changes</button>
                 </form>
-                <form method="post" action="{{ prefix }}/tools/catalog/workspaces/{{ w.get('id') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete workspace?');">
+                <form method="post" action="{{ prefix }}/tools/catalog/workspaces/{{ w.get('id') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete workspace {{ w.get('id') }}?');">
                   <button class="btn sm danger" type="submit">Delete workspace</button>
                 </form>
               </div>
             </details>
           </td>
         </tr>
-      {% else %}<tr><td colspan="7" class="empty">No workspaces</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="7">{{ empty_state('No workspaces') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
   <div class="card" style="margin-top:12px;">
+    <h3>Add workspace</h3>
     <form method="post" action="{{ prefix }}/tools/catalog/workspaces">
       <div class="form-row cols-3">
         <div class="field"><label>ID</label><input name="id" required></div>
@@ -185,9 +215,16 @@
         <div class="field"><label>Mount path</label><input name="mount_path" value="/workspace" required></div>
       </div>
       <div class="form-row cols-3">
-        <div class="field"><label>Mode</label><select name="mount_mode"><option>ro</option><option>rw</option></select></div>
-        <div class="field"><label>Allowed agents</label><input name="allowed_agents" value="*"></div>
-        <div class="field"><label>Retention</label><input name="retention_policy" value="ephemeral"></div>
+        <div class="field"><label>Mode</label><select name="mount_mode"><option value="ro">read-only</option><option value="rw">read-write</option></select></div>
+        <div class="field"><label>Allowed agents</label>
+          <select name="allowed_agents" multiple>
+            <option value="*" selected>* (all)</option>
+            {% for aid in agent_ids %}<option value="{{ aid }}">{{ aid }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Retention</label>
+          <select name="retention_policy">{% for pol in workspace_retention %}<option value="{{ pol }}">{{ pol }}</option>{% endfor %}</select>
+        </div>
       </div>
       <button class="btn primary" type="submit">Save workspace</button>
     </form>
@@ -195,11 +232,11 @@
 </div>
 
 <div class="section" id="exec-policy">
-  <h2>Tool Execution Policy <span class="badge informational">informational</span></h2>
+  <h2>Tool Execution Policy {{ section_hint('live') }}</h2>
   <div class="card">
     <div class="kv">
-      <dt>Local mode (default)</dt><dd>LLM tool_calls executed in the agent VM by Engine 1 after server RBAC; gateway filters tools_schema to the manifest allowlist.</dd>
-      <dt>Hybrid mode (opt-in)</dt><dd>manifest engine3.tool_execution_mode: hybrid + provider_tools; provider registry must set hosted_tools_allowed. Requires admin role.</dd>
+      <dt>Local mode (default)</dt><dd>LLM <span class="mono">tool_calls</span> run inside the agent VM by Engine 1 after server RBAC. Set per agent on <a href="{{ prefix }}/agents#create-agent">Create Agent</a> or the manifest editor.</dd>
+      <dt>Hybrid mode (opt-in)</dt><dd>Requires manifest <span class="mono">tool_execution_mode: hybrid</span>, listed provider tools, and the provider registry <a href="{{ prefix }}/inference#providers">hosted tools allowed</a> flag. Admin RBAC only.</dd>
     </div>
   </div>
 </div>

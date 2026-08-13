@@ -1,8 +1,24 @@
 # Architecture Changes Log
 
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-08-13
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
+
+## [2026-08-13] - Phase 9.5: Operator Console UX polish
+
+**Documents Modified:**
+- `src/corvus/management/ui.py`, `ui_client.py`, `ui_copy.py`, templates, `corvus.css`
+- `tests/test_ui.py`
+- OPERATIONS, MANAGEMENT-API, PHASES, ROADMAP, COMPONENT-STATUS
+
+**Key Changes:**
+- Console pages use operator-facing labels, page leads, confirmations, catalog dropdowns, and hash-tab highlighting; JSON editors remain the day-2 control surface.
+- Sidebar no longer shows Phase 9 taxonomy badges; login copy and ops docs match username + PIN/password (admin/operator).
+- Agent create now applies self `launch_grants` from namespace permissions when the JSON box is empty; Launch/Stop are status-aware.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
 
 ## [2026-08-02] - Operator Console: restore Phase 9 edit surfaces
 

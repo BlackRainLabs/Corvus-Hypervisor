@@ -1,14 +1,19 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
 {% block title %}Users & Access — Corvus Hypervisor{% endblock %}
 {% block heading %}Users &amp; Access{% endblock %}
 {% block topmeta %}{{ users | length }} users{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.users) }}
 <div class="tabs">
-  <a href="#users">Users</a><a href="#create-user">Create User</a><a href="#roles">Roles</a><a href="#groups">Groups</a>
+  <a href="#users" :class="{ 'active': hash === '#users' || hash === '' }">Users</a>
+  <a href="#create-user" :class="{ 'active': hash === '#create-user' }">Create User</a>
+  <a href="#roles" :class="{ 'active': hash === '#roles' }">Roles</a>
+  <a href="#groups" :class="{ 'active': hash === '#groups' }">Groups</a>
 </div>
 
 <div class="section" id="users">
-  <h2>Users <span class="badge edit">edit</span></h2>
+  <h2>Users {{ section_hint('editable') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Role</th><th>Groups</th><th>Privileges</th><th>Allowed Agents</th><th>Credential</th></tr></thead>
@@ -22,31 +27,48 @@
           <td>{{ u.get('allowed_agents', []) | join(', ') or '-' }}</td>
           <td>{{ 'set' if u.get('credential_hash') else '-' }}</td>
         </tr>
-      {% else %}<tr><td colspan="6" class="empty">No users</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="6">{{ empty_state('No users', prefix + '/users#create-user', 'Create a user') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="section" id="create-user">
-  <h2>Create / Update User <span class="badge edit">edit</span></h2>
+  <h2>Create User {{ section_hint('editable') }}</h2>
+  <p class="help">To change an existing user, open their detail page from the table above. Saving an existing ID here still upserts.</p>
   <div class="card">
     <form method="post" action="{{ prefix }}/users/create">
       <div class="form-row">
         <div class="field"><label>User ID</label><input name="user_id" required placeholder="analyst-01"></div>
         <div class="field"><label>Role</label>
           <select name="role">
-            <option value="researcher">researcher</option>
-            <option value="operator">operator</option>
-            <option value="admin">admin</option>
-            <option value="viewer">viewer</option>
+            <option value="researcher">researcher — default agent user</option>
+            <option value="operator">operator — can sign in to this console</option>
+            <option value="admin">admin — full control + elevations</option>
+            <option value="viewer">viewer — API read-only (cannot sign in here)</option>
           </select>
         </div>
       </div>
       <div class="form-row cols-3">
-        <div class="field"><label>Groups</label><input name="groups" placeholder="research, admins"><div class="help">comma-separated</div></div>
-        <div class="field"><label>Privileges</label><input name="privileges" placeholder="approve_elevation"><div class="help">comma-separated</div></div>
-        <div class="field"><label>Allowed Agents</label><input name="allowed_agents" placeholder="* or agent ids"><div class="help">comma-separated</div></div>
+        <div class="field"><label>Groups</label>
+          <select name="groups" multiple>
+            {% for gid in group_ids %}<option value="{{ gid }}">{{ gid }}</option>{% endfor %}
+          </select>
+          <div class="help">Hold Ctrl/Cmd to multi-select. Create groups below if the list is empty.</div>
+        </div>
+        <div class="field"><label>Privileges</label>
+          <select name="privileges" multiple>
+            {% for p in privileges %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Allowed Agents</label>
+          <select name="allowed_agents" multiple>
+            <option value="*">* (all)</option>
+            {% for aid in agent_ids %}<option value="{{ aid }}">{{ aid }}</option>{% endfor %}
+          </select>
+        </div>
       </div>
       <div class="form-row">
         <div class="field"><label>Aliases (JSON array)</label>
@@ -64,20 +86,20 @@
 </div>
 
 <div class="section" id="roles">
-  <h2>Roles &amp; Privileges <span class="badge informational">informational</span></h2>
+  <h2>Roles &amp; Privileges {{ section_hint('live') }}</h2>
   <div class="card">
     <div class="kv">
-      <dt>admin</dt><dd>Full control; can approve elevations and manage rules.</dd>
-      <dt>operator</dt><dd>Operate agents and monitor; scoped mutations.</dd>
-      <dt>researcher</dt><dd>Default agent user role.</dd>
-      <dt>viewer</dt><dd>Read-only.</dd>
+      <dt>admin</dt><dd>Full control. Can approve elevations, manage rules, and sign in to this console.</dd>
+      <dt>operator</dt><dd>Operate agents and monitor. Can sign in to this console.</dd>
+      <dt>researcher</dt><dd>Default agent-facing role. Cannot sign in to the Operator Console.</dd>
+      <dt>viewer</dt><dd>Read-only API access. Cannot sign in to the Operator Console.</dd>
       <dt>Elevation privileges</dt><dd class="mono">approve_elevation, can_approve_elevation</dd>
     </div>
   </div>
 </div>
 
 <div class="section" id="groups">
-  <h2>Groups <span class="badge edit">edit</span></h2>
+  <h2>Groups {{ section_hint('editable') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Parent</th><th>Members</th><th>Rules</th><th>Actions</th></tr></thead>
@@ -95,7 +117,14 @@
                 <form method="post" action="{{ prefix }}/users/groups/create">
                   <input type="hidden" name="group_id" value="{{ g.get('id') }}">
                   <div class="form-row cols-3">
-                    <div class="field"><label>Parent group</label><input name="parent_group" value="{{ g.get('parent_group') or '' }}"></div>
+                    <div class="field"><label>Parent group</label>
+                      <select name="parent_group">
+                        <option value="">(none)</option>
+                        {% for gid in group_ids if gid != g.get('id') %}
+                        <option value="{{ gid }}" {% if g.get('parent_group') == gid %}selected{% endif %}>{{ gid }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
                     <div class="field"><label>Inherited rules</label>
                       <select name="inherited_rules">
                         <option value="1" {% if g.get('inherited_rules') %}selected{% endif %}>yes</option>
@@ -104,35 +133,63 @@
                     </div>
                   </div>
                   <div class="form-row">
-                    <div class="field"><label>Members</label><input name="members" value="{{ g.get('members', []) | join(', ') }}"></div>
-                    <div class="field"><label>Rule IDs</label><input name="rule_ids" value="{{ g.get('rule_ids', []) | join(', ') }}"></div>
+                    <div class="field"><label>Members</label>
+                      <select name="members" multiple>
+                        {% for uid in user_ids %}
+                        <option value="{{ uid }}" {% if uid in g.get('members', []) %}selected{% endif %}>{{ uid }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="field"><label>Rule IDs</label>
+                      <select name="rule_ids" multiple>
+                        {% for rid in rule_ids %}
+                        <option value="{{ rid }}" {% if rid in g.get('rule_ids', []) %}selected{% endif %}>{{ rid }}</option>
+                        {% endfor %}
+                      </select>
+                      <div class="help"><a href="{{ prefix }}/security#rules">Manage rules</a></div>
+                    </div>
                   </div>
                   <button class="btn sm primary" type="submit">Save changes</button>
                 </form>
-                <form method="post" action="{{ prefix }}/users/groups/{{ g.get('id') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete group?');">
+                <form method="post" action="{{ prefix }}/users/groups/{{ g.get('id') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete group {{ g.get('id') }}?');">
                   <button class="btn sm danger" type="submit">Delete group</button>
                 </form>
               </div>
             </details>
           </td>
         </tr>
-      {% else %}<tr><td colspan="5" class="empty">No groups</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="5">{{ empty_state('No groups') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
   <div class="card" style="margin-top:12px;">
-    <h3>Create / update group</h3>
+    <h3>Create group</h3>
     <form method="post" action="{{ prefix }}/users/groups/create">
       <div class="form-row cols-3">
         <div class="field"><label>Group ID</label><input name="group_id" required placeholder="research"></div>
-        <div class="field"><label>Parent group</label><input name="parent_group" placeholder="optional"></div>
+        <div class="field"><label>Parent group</label>
+          <select name="parent_group">
+            <option value="">(none)</option>
+            {% for gid in group_ids %}<option value="{{ gid }}">{{ gid }}</option>{% endfor %}
+          </select>
+        </div>
         <div class="field"><label>Inherited rules</label>
           <select name="inherited_rules"><option value="1">yes</option><option value="0">no</option></select>
         </div>
       </div>
       <div class="form-row">
-        <div class="field"><label>Members</label><input name="members" placeholder="user-a, user-b"><div class="help">comma-separated user ids</div></div>
-        <div class="field"><label>Rule IDs</label><input name="rule_ids" placeholder="rule-1, rule-2"><div class="help">comma-separated</div></div>
+        <div class="field"><label>Members</label>
+          <select name="members" multiple>
+            {% for uid in user_ids %}<option value="{{ uid }}">{{ uid }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Rule IDs</label>
+          <select name="rule_ids" multiple>
+            {% for rid in rule_ids %}<option value="{{ rid }}">{{ rid }}</option>{% endfor %}
+          </select>
+        </div>
       </div>
       <button class="btn primary" type="submit">Save group</button>
     </form>

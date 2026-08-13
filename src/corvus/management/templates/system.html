@@ -1,41 +1,40 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, setting_row %}
 {% block title %}System — Corvus Hypervisor{% endblock %}
 {% block heading %}System{% endblock %}
 {% block topmeta %}server internals{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.system) }}
 <div class="tabs">
-  <a href="#health">Health</a><a href="#metrics">Metrics</a><a href="#config">Configuration</a>
+  <a href="#health" :class="{ 'active': hash === '#health' || hash === '' }">Health</a>
+  <a href="#metrics" :class="{ 'active': hash === '#metrics' }">Metrics</a>
+  <a href="#config" :class="{ 'active': hash === '#config' }">Configuration</a>
 </div>
 
 <div class="section" id="health">
-  <h2>Health <span class="badge informational">informational</span></h2>
+  <h2>Health {{ section_hint('live') }}</h2>
   {% include "partials/health_tiles.html" %}
 </div>
 
 <div class="section" id="metrics">
-  <h2>Prometheus Metrics <span class="badge informational">informational</span></h2>
-  <pre class="code">{{ metrics_text or 'metrics unavailable' }}</pre>
-  <p class="help">Scrape endpoint: <span class="mono">GET /v1/metrics</span>. OpenAPI docs: <a href="/docs" target="_blank">/docs</a>.</p>
+  <h2>Prometheus Metrics {{ section_hint('live') }}</h2>
+  <p class="help">Scrape endpoint: <span class="mono">GET /v1/metrics</span> with the Management API key. OpenAPI: <a href="/docs" target="_blank">/docs</a>.</p>
+  <details class="inline">
+    <summary>Show Prometheus text dump</summary>
+    <div class="body"><pre class="code">{{ metrics_text or 'metrics unavailable' }}</pre></div>
+  </details>
 </div>
 
 <div class="section" id="config">
-  <h2>Server Configuration <span class="badge edit">edit</span></h2>
-  <p class="help">DB-backed settings (env wins if set as break-glass). Secrets are write-only. Bind host/port/transport require operator restart of <span class="mono">corvus-server</span> — the UI does not auto-kill the process.</p>
+  <h2>Server Configuration {{ section_hint('editable') }}</h2>
+  <p class="help">DB-backed settings (env wins if set as break-glass). Secrets are write-only. Bind host/port/transport require an operator restart of <span class="mono">corvus-server</span> — the UI does not auto-kill the process. Changing the API key or session secret immediately affects clients and console logins.</p>
   <div class="card">
     <form method="post" action="{{ prefix }}/settings/patch">
       <input type="hidden" name="return_to" value="/system">
       {% for group, rows in settings_groups.items() %}
-        <h3>{{ group }}</h3>
+        <h3>{{ group | humanize }}</h3>
         {% for s in rows %}
-        <div class="form-row">
-          <div class="field">
-            <label class="mono">{{ s.key }}
-              {% if s.restart_required %}<span class="badge warn">restart_required</span>{% endif %}
-              {% if s.secret %}<span class="badge danger">secret</span>{% endif %}
-            </label>
-            <input name="setting_{{ s.key }}" value="{{ '' if s.secret else s.value }}" placeholder="{{ '********' if s.secret else '' }}">
-          </div>
-        </div>
+          {{ setting_row(s) }}
         {% endfor %}
       {% else %}
         <p class="muted">No settings seeded yet.</p>
@@ -44,7 +43,7 @@
     </form>
   </div>
   <details style="margin-top:16px;">
-    <summary>Process env snapshot (informational)</summary>
+    <summary>Process env snapshot (live view)</summary>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Setting</th><th>Value</th></tr></thead>

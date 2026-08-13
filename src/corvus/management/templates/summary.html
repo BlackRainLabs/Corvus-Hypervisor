@@ -1,11 +1,40 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, empty_state %}
 {% block title %}Overview — Corvus Hypervisor{% endblock %}
 {% block heading %}Overview{% endblock %}
-{% block topmeta %}live · refreshes every 5s{% endblock %}
+{% block topmeta %}live · health refreshes every 5s{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.summary) }}
+<div class="cta-row">
+  <a class="btn primary sm" href="{{ prefix }}/agents#create-agent">Create agent</a>
+  <a class="btn sm" href="{{ prefix }}/security#elevations">Review elevations</a>
+</div>
+
 <div class="section">
   <div id="health-tiles" hx-get="{{ prefix }}/partials/health" hx-trigger="every 5s" hx-swap="innerHTML">
     {% include "partials/health_tiles.html" %}
+  </div>
+</div>
+
+<div class="section">
+  <h2>Agent fleet</h2>
+  <div class="grid cols-4">
+    <a class="tile clickable" href="{{ prefix }}/agents">
+      <div class="label">Registered</div>
+      <div class="value">{{ fleet.total }}</div>
+    </a>
+    <a class="tile clickable" href="{{ prefix }}/agents">
+      <div class="label">Running</div>
+      <div class="value">{{ fleet.running }}</div>
+    </a>
+    <a class="tile clickable" href="{{ prefix }}/agents">
+      <div class="label">Stopped</div>
+      <div class="value">{{ fleet.stopped }}</div>
+    </a>
+    <a class="tile clickable" href="{{ prefix }}/agents">
+      <div class="label">Failed / degraded</div>
+      <div class="value">{{ fleet.failed }}</div>
+    </a>
   </div>
 </div>
 
@@ -18,13 +47,13 @@
         <tbody>
         {% for e in pending_elevations %}
           <tr>
-            <td class="mono">{{ e.get('id', '')[:8] }}</td>
-            <td>{{ e.get('agent_id') or e.get('source', {}).get('agent_id', '-') }}</td>
+            <td class="mono" title="{{ e.get('id', '') }}">{{ e.get('id', '')[:8] }}</td>
+            <td>{% if e.get('agent_id') or e.get('source', {}).get('agent_id') %}<a href="{{ prefix }}/agents/{{ e.get('agent_id') or e.get('source', {}).get('agent_id') }}">{{ e.get('agent_id') or e.get('source', {}).get('agent_id') }}</a>{% else %}-{% endif %}</td>
             <td class="faint">{{ e.get('created_at', '')[:19] }}</td>
             <td><a href="{{ prefix }}/security#elevations">Review</a></td>
           </tr>
         {% else %}
-          <tr><td colspan="4" class="empty">No pending elevations</td></tr>
+          <tr><td colspan="4">{{ empty_state('No pending elevations') }}</td></tr>
         {% endfor %}
         </tbody>
       </table>
@@ -39,16 +68,20 @@
         <tbody>
         {% for log in recent_audit %}
           <tr>
-            <td class="faint">{{ log.get('timestamp', '')[11:19] }}</td>
-            <td class="mono">{{ log.get('event_type', '-') }}</td>
-            <td>{{ log.get('agent_id') or '-' }}</td>
+            <td class="faint" title="{{ log.get('timestamp', '') }}">{{ log.get('timestamp', '')[:19] or '-' }}</td>
+            <td class="mono"><a href="{{ prefix }}/audit?event_type={{ log.get('event_type', '') }}">{{ log.get('event_type', '-') }}</a></td>
+            <td>
+              {% if log.get('agent_id') %}
+              <a href="{{ prefix }}/audit?agent_id={{ log.get('agent_id') }}">{{ log.get('agent_id') }}</a>
+              {% else %}-{% endif %}
+            </td>
             <td>
               {% set d = log.get('decision') %}
               {% if d %}<span class="badge {{ 'ok' if d == 'allow' else ('danger' if d == 'deny' else 'warn') }}">{{ d }}</span>{% else %}-{% endif %}
             </td>
           </tr>
         {% else %}
-          <tr><td colspan="4" class="empty">No audit events</td></tr>
+          <tr><td colspan="4">{{ empty_state('No audit events', prefix + '/audit', 'Open audit browser') }}</td></tr>
         {% endfor %}
         </tbody>
       </table>

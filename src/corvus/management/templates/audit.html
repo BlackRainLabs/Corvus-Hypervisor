@@ -1,19 +1,27 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, empty_state %}
 {% block title %}Audit — Corvus Hypervisor{% endblock %}
 {% block heading %}Audit Log{% endblock %}
-{% block topmeta %}{{ logs | length }} events{% endblock %}
+{% block topmeta %}{{ logs | length }} events (limit {{ log_limit or filters.limit }}){% endblock %}
 {% block content %}
+{{ page_lead(page_leads.audit) }}
 <div class="section">
   <div class="card">
     <form method="get" action="{{ prefix }}/audit">
       <div class="form-row cols-3">
         <div class="field"><label>Correlation ID</label><input name="correlation_id" value="{{ filters.correlation_id }}"></div>
         <div class="field"><label>Origin Correlation ID</label><input name="origin_correlation_id" value="{{ filters.origin_correlation_id }}"></div>
-        <div class="field"><label>Agent ID</label><input name="agent_id" value="{{ filters.agent_id }}"></div>
+        <div class="field"><label>Agent ID</label>
+          <input name="agent_id" list="audit-agents" value="{{ filters.agent_id }}">
+          <datalist id="audit-agents">{% for aid in agent_ids %}<option value="{{ aid }}"></option>{% endfor %}</datalist>
+        </div>
       </div>
       <div class="form-row cols-3">
         <div class="field"><label>User ID</label><input name="user_id" value="{{ filters.user_id }}"></div>
-        <div class="field"><label>Event Type</label><input name="event_type" value="{{ filters.event_type }}"></div>
+        <div class="field"><label>Event Type</label>
+          <input name="event_type" list="audit-events" value="{{ filters.event_type }}">
+          <datalist id="audit-events">{% for ev in event_types %}<option value="{{ ev }}"></option>{% endfor %}</datalist>
+        </div>
         <div class="field"><label>Limit</label><input name="limit" type="number" value="{{ filters.limit }}"></div>
       </div>
       <div class="form-row cols-3">
@@ -22,8 +30,8 @@
         <div class="field"><label>Elevation ID</label><input name="elevation_id" value="{{ filters.elevation_id }}"></div>
       </div>
       <div class="form-row">
-        <div class="field"><label>From (ISO time)</label><input name="from" value="{{ filters.from }}" placeholder="2026-08-01T00:00:00"></div>
-        <div class="field"><label>To (ISO time)</label><input name="to" value="{{ filters.to }}" placeholder="2026-08-02T23:59:59"></div>
+        <div class="field"><label>From</label><input name="from" type="datetime-local" value="{{ filters.from }}"></div>
+        <div class="field"><label>To</label><input name="to" type="datetime-local" value="{{ filters.to }}"></div>
       </div>
       <div class="btn-row">
         <button class="btn primary" type="submit">Apply filters</button>
@@ -34,6 +42,7 @@
 </div>
 
 <div class="section">
+  <p class="help">Showing {{ logs | length }} event{{ '' if logs | length == 1 else 's' }} (limit {{ log_limit or filters.limit }}).</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Time</th><th>Event</th><th>Agent</th><th>Decision</th><th>Correlation</th><th></th></tr></thead>
@@ -42,7 +51,11 @@
         <tr>
           <td class="faint mono">{{ (log.get('timestamp') or '')[:19] }}</td>
           <td class="mono">{{ log.get('event_type') }}</td>
-          <td>{{ log.get('agent_id') or '-' }}</td>
+          <td>
+            {% if log.get('agent_id') %}
+            <a href="{{ prefix }}/agents/{{ log.get('agent_id') }}">{{ log.get('agent_id') }}</a>
+            {% else %}-{% endif %}
+          </td>
           <td>
             {% set d = log.get('decision') %}
             {% if d %}<span class="badge {{ 'ok' if d == 'allow' else ('danger' if d == 'deny' else 'warn') }}">{{ d }}</span>{% else %}-{% endif %}
@@ -56,7 +69,9 @@
             <details class="inline"><summary>Details</summary><div class="body"><pre class="code">{{ log.get('details') | tojson(indent=2) }}</pre></div></details>
           </td>
         </tr>
-      {% else %}<tr><td colspan="6" class="empty">No matching audit events</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="6">{{ empty_state('No matching audit events') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>

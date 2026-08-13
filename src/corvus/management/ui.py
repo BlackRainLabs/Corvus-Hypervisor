@@ -28,6 +28,28 @@ from corvus.management.ui_client import (
     sign_session_for_user,
     verify_session,
 )
+from corvus.management.ui_copy import (
+    AUDIT_EVENT_TYPES,
+    KNOWN_PLATFORMS,
+    MESSAGE_TYPES,
+    PAGE_LEADS,
+    PRIVILEGES,
+    QUOTA_CLASSES,
+    RETENTION_POLICIES,
+    WORKSPACE_RETENTION,
+    annotate_settings,
+    annotate_settings_groups,
+    as_list,
+    datetime_local_to_iso,
+    engine_summary,
+    fleet_counts,
+    humanize_key,
+    ids_of,
+    iso_to_datetime_local,
+    quota_label,
+    redact_user_profile,
+    rule_summary,
+)
 from corvus.server.bootstrap import AppContext
 from corvus.server.config import ServerConfig
 
@@ -63,12 +85,43 @@ def _split_csv(raw: str | None) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def _form_values(value: str | list[str] | None) -> list[str]:
+    """Normalize multi-select or comma-separated form fields into unique tokens."""
+    if value is None or value == "":
+        return []
+    items = value if isinstance(value, list) else [value]
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        for part in _split_csv(str(item)):
+            if part not in seen:
+                seen.add(part)
+                out.append(part)
+    return out
+
+
+def _configure_templates(templates: Jinja2Templates) -> None:
+    env = templates.env
+    env.filters["humanize"] = humanize_key
+    env.filters["quota_label"] = quota_label
+    env.filters["as_list"] = as_list
+    env.globals["page_leads"] = PAGE_LEADS
+    env.globals["message_types"] = MESSAGE_TYPES
+    env.globals["audit_event_types"] = AUDIT_EVENT_TYPES
+    env.globals["retention_policies"] = RETENTION_POLICIES
+    env.globals["workspace_retention"] = WORKSPACE_RETENTION
+    env.globals["privileges"] = PRIVILEGES
+    env.globals["quota_classes"] = QUOTA_CLASSES
+    env.globals["known_platforms"] = KNOWN_PLATFORMS
+
+
 def mount_ui(app: FastAPI, ctx: AppContext) -> None:
     """Attach the operator console router + static assets to ``app``."""
     config = ctx.config
     prefix = config.ui_path_prefix.rstrip("/") or "/ui"
     secret = config.ui_session_secret or secrets.token_hex(32)
     templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+    _configure_templates(templates)
     api = ApiClient(app, config.api_key)
 
     app.mount(
@@ -173,6 +226,8 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         health = await api.get("/v1/health")
         elevations = await api.get("/v1/elevations", params={"status": "pending"})
         audit = await api.get("/v1/audit/logs", params={"limit": 8})
+        agents = await api.get("/v1/agents")
+        agent_list = agents.get("agents", [])
         return render(
             request,
             "summary.html",
@@ -180,6 +235,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             health=health,
             pending_elevations=elevations.get("elevations", []),
             recent_audit=audit.get("logs", []),
+            fleet=fleet_counts(agent_list),
         )
 
     @router.get("/partials/health", response_class=HTMLResponse)
@@ -221,14 +277,22 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             return redirect("/agents", err=_error_text(manifest, "Agent not found"))
         vms = await api.get(f"/v1/agents/{agent_id}/vms")
         namespaces = await api.get(f"/v1/agents/{agent_id}/namespaces")
+        agents = await api.get("/v1/agents")
+        agent_row = next(
+            (row for row in agents.get("agents", []) if row.get("id") == agent_id),
+            {},
+        )
+        manifest_body = manifest.get("manifest", {})
         return render(
             request,
             "agent_detail.html",
             "agents",
             agent_id=agent_id,
-            manifest=manifest.get("manifest", {}),
+            agent_status=agent_row.get("status", "stopped"),
+            manifest=manifest_body,
             manifest_hash=manifest.get("manifest_hash", ""),
-            manifest_json=json.dumps(manifest.get("manifest", {}), indent=2),
+            manifest_json=json.dumps(manifest_body, indent=2),
+            summary=engine_summary(manifest_body),
             vms=vms.get("vms", []),
             namespaces=namespaces.get("namespaces", []),
         )
@@ -247,7 +311,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         provider_tools: str = Form(default=""),
         workspaces: list[str] = Form(default=[]),
         rootfs_image: str = Form(default="corvus-test-rootfs"),
-        namespace_permissions: str = Form(default="read,write"),
+        namespace_permissions: list[str] = Form(default=[]),
         launch_grants_json: str = Form(default=""),
         memory_mb: int = Form(default=512),
         vcpu_count: int = Form(default=1),
@@ -287,10 +351,18 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
                 launch_grants = parsed
             except json.JSONDecodeError:
                 return redirect("/agents", err="Invalid launch_grants_json")
+        elif namespaces:
+            perms = _form_values(namespace_permissions) or ["read", "write"]
+            launch_grants = [
+                {
+                    "target_agent": agent_id,
+                    "namespace": namespace,
+                    "permissions": perms,
+                }
+                for namespace in namespaces
+            ]
         if launch_grants:
             manifest["launch_grants"] = launch_grants
-        # namespace_permissions is reserved for day-2 docs/UI hint; namespaces list is authoritative
-        _ = namespace_permissions
         manifest["resource_limits"] = {"memory_mb": memory_mb, "vcpu_count": vcpu_count}
         ok, data, _ = await api.call(
             "POST", "/v1/agents", json={"id": agent_id, "manifest": manifest}
@@ -362,6 +434,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         tools = await api.get("/v1/catalog/tools")
         skills = await api.get("/v1/catalog/skills")
         ws = await api.get("/v1/catalog/workspaces")
+        agents = await api.get("/v1/agents")
         return render(
             request,
             "tools.html",
@@ -369,6 +442,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             tools=tools.get("tools", []),
             skills=skills.get("skills", []),
             workspaces=ws.get("workspaces", []),
+            agent_ids=ids_of(agents.get("agents", []), "id"),
         )
 
     @router.post("/tools/catalog/{kind}")
@@ -387,7 +461,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         source: str = Form(default=""),
         mount_path: str = Form(default="/workspace"),
         mount_mode: str = Form(default="ro"),
-        allowed_agents: str = Form(default="*"),
+        allowed_agents: list[str] = Form(default=[]),
         retention_policy: str = Form(default="ephemeral"),
         max_records: str = Form(default="1000"),
         max_record_bytes: str = Form(default="65536"),
@@ -419,7 +493,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
                 "source": source,
                 "mount_path": mount_path,
                 "mount_mode": mount_mode,
-                "allowed_agents": _split_csv(allowed_agents) or ["*"],
+                "allowed_agents": _form_values(allowed_agents) or ["*"],
                 "retention_policy": retention_policy,
             }
         elif kind == "memory-namespaces":
@@ -476,12 +550,22 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             q for q in quotas.get("quotas", []) if "llm_tokens" in str(q.get("key", ""))
         ]
         settings_resp = await api.get("/v1/settings")
-        inference_settings = settings_resp.get("settings", {}).get("inference", [])
+        inference_settings = annotate_settings(
+            settings_resp.get("settings", {}).get("inference", [])
+        )
+        provider_rows = providers.get("llm_providers", [])
+        catalog_by_id = {
+            entry.get("provider_id"): entry
+            for entry in ctx.catalog_store.catalog.api_payload().get("llm_providers", [])
+        }
+        for row in provider_rows:
+            extra = catalog_by_id.get(row.get("provider_id")) or {}
+            row["quota_class"] = extra.get("quota_class") or "dev"
         return render(
             request,
             "inference.html",
             "inference",
-            providers=providers.get("llm_providers", []),
+            providers=provider_rows,
             token_quotas=token_quotas,
             settings={
                 "default_provider": next(
@@ -518,6 +602,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         credential_ref: str = Form(default=""),
         hosted_tools_allowed: str = Form(default="0"),
         allowed_hosted_tools: str = Form(default=""),
+        quota_class: str = Form(default="dev"),
     ) -> RedirectResponse:
         require_session(request)
         existing = None
@@ -542,7 +627,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             or "stub://local",
             "supported_models": _split_csv(supported_models),
             "credential_ref": cred,
-            "quota_class": "dev",
+            "quota_class": quota_class.strip() or "dev",
             "hosted_tools_allowed": hosted_tools_allowed == "1",
             "allowed_hosted_tools": _split_csv(allowed_hosted_tools),
         }
@@ -634,7 +719,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             "memory",
             namespaces=ws.get("memory_namespaces", []),
             settings=settings,
-            memory_settings=memory_settings,
+            memory_settings=annotate_settings(memory_settings),
         )
 
     # ---- Users & Access ---------------------------------------------------
@@ -643,12 +728,18 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         require_session(request)
         users = await api.get("/v1/users")
         groups = await api.get("/v1/groups")
+        agents = await api.get("/v1/agents")
+        rules = await api.get("/v1/rules")
         return render(
             request,
             "users.html",
             "users",
             users=users.get("users", []),
             groups=groups.get("groups", []),
+            agent_ids=ids_of(agents.get("agents", []), "id"),
+            rule_ids=ids_of(rules.get("rules", []), "id"),
+            user_ids=ids_of(users.get("users", []), "id"),
+            group_ids=ids_of(groups.get("groups", []), "id"),
         )
 
     @router.get("/users/{user_id}", response_class=HTMLResponse)
@@ -657,12 +748,18 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         ok, data, _ = await api.call("GET", f"/v1/users/{user_id}")
         if not ok:
             return redirect("/users", err=_error_text(data, "User not found"))
+        user = data.get("user", {})
+        agents = await api.get("/v1/agents")
+        groups = await api.get("/v1/groups")
+        redacted = redact_user_profile(user)
         return render(
             request,
             "user_detail.html",
             "users",
-            user=data.get("user", {}),
-            user_json=json.dumps(data.get("user", {}), indent=2),
+            user=user,
+            user_json=json.dumps(redacted, indent=2),
+            agent_ids=ids_of(agents.get("agents", []), "id"),
+            group_ids=ids_of(groups.get("groups", []), "id"),
         )
 
     @router.post("/users/create")
@@ -670,9 +767,9 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         request: Request,
         user_id: str = Form(...),
         role: str = Form(default="researcher"),
-        groups: str = Form(default=""),
-        privileges: str = Form(default=""),
-        allowed_agents: str = Form(default=""),
+        groups: list[str] = Form(default=[]),
+        privileges: list[str] = Form(default=[]),
+        allowed_agents: list[str] = Form(default=[]),
         aliases_json: str = Form(default=""),
         pin: str = Form(default=""),
         password: str = Form(default=""),
@@ -682,9 +779,9 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         payload: dict[str, Any] = {
             "id": user_id,
             "role": role,
-            "groups": _split_csv(groups),
-            "privileges": _split_csv(privileges),
-            "allowed_agents": _split_csv(allowed_agents),
+            "groups": _form_values(groups),
+            "privileges": _form_values(privileges),
+            "allowed_agents": _form_values(allowed_agents),
         }
         if aliases_json.strip():
             try:
@@ -720,16 +817,16 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         group_id: str = Form(...),
         parent_group: str = Form(default=""),
         inherited_rules: str = Form(default="1"),
-        members: str = Form(default=""),
-        rule_ids: str = Form(default=""),
+        members: list[str] = Form(default=[]),
+        rule_ids: list[str] = Form(default=[]),
     ) -> RedirectResponse:
         require_session(request)
         payload = {
             "id": group_id,
             "parent_group": parent_group or None,
             "inherited_rules": inherited_rules != "0",
-            "members": _split_csv(members),
-            "rule_ids": _split_csv(rule_ids),
+            "members": _form_values(members),
+            "rule_ids": _form_values(rule_ids),
         }
         ok, data, _ = await api.call("POST", "/v1/groups", json=payload)
         if not ok:
@@ -781,18 +878,26 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             if short in behavioral:
                 behavioral[short] = row["value"]
         rules_list = rules.get("rules", [])
+        agents = await api.get("/v1/agents")
+        ws = await api.get("/v1/catalog/workspaces")
+        annotated_rules = [
+            {"rule": rule, "summary": rule_summary(rule)} for rule in rules_list
+        ]
         return render(
             request,
             "security.html",
             "security",
-            rules=rules_list,
+            rules=annotated_rules,
             rules_json=json.dumps(rules_list, indent=2),
             grants=grants.get("grants", []),
             elevations=elevations.get("elevations", []),
             quotas=quotas.get("quotas", []),
             users=users.get("users", []),
+            agent_ids=ids_of(agents.get("agents", []), "id"),
+            namespace_ids=ids_of(ws.get("memory_namespaces", []), "name"),
+            user_ids=ids_of(users.get("users", []), "id"),
             behavioral=behavioral,
-            behavioral_settings=behavioral_settings,
+            behavioral_settings=annotate_settings(behavioral_settings),
         )
 
     @router.post("/security/rules/create")
@@ -964,6 +1069,8 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
     async def audit_page(request: Request) -> HTMLResponse:
         require_session(request)
         qp = request.query_params
+        from_iso = datetime_local_to_iso(qp.get("from", ""))
+        to_iso = datetime_local_to_iso(qp.get("to", ""))
         filters = {
             "correlation_id": qp.get("correlation_id", ""),
             "origin_correlation_id": qp.get("origin_correlation_id", ""),
@@ -973,18 +1080,31 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             "rule_id": qp.get("rule_id", ""),
             "grant_id": qp.get("grant_id", ""),
             "elevation_id": qp.get("elevation_id", ""),
-            "from": qp.get("from", ""),
-            "to": qp.get("to", ""),
+            "from": iso_to_datetime_local(qp.get("from", "")),
+            "to": iso_to_datetime_local(qp.get("to", "")),
             "limit": qp.get("limit", "100"),
         }
-        params = {**filters}
+        params = {
+            **filters,
+            "from": from_iso,
+            "to": to_iso,
+        }
         logs = await api.get("/v1/audit/logs", params=params)
+        agents = await api.get("/v1/agents")
+        log_rows = logs.get("logs", [])
+        event_types = sorted(
+            {str(row.get("event_type")) for row in log_rows if row.get("event_type")}
+            | set(AUDIT_EVENT_TYPES)
+        )
         return render(
             request,
             "audit.html",
             "audit",
-            logs=logs.get("logs", []),
+            logs=log_rows,
             filters=filters,
+            agent_ids=ids_of(agents.get("agents", []), "id"),
+            event_types=event_types,
+            log_limit=filters["limit"],
         )
 
     # ---- System -----------------------------------------------------------
@@ -1004,7 +1124,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             health=health,
             metrics_text=metrics_text,
             config_rows=_config_view(config),
-            settings_groups=settings_resp.get("settings", {}),
+            settings_groups=annotate_settings_groups(settings_resp.get("settings", {})),
         )
 
     app.include_router(router)

@@ -17,8 +17,9 @@
     <div class="value">{{ reg.get('active', 0) }} <span class="faint" style="font-size:16px;">/ {{ reg.get('failed', 0) }}</span></div>
   </div>
   <div class="tile">
-    <div class="label">Pending Replay</div>
+    <div class="label">Pending elevation replay</div>
     <div class="value">{{ server.get('pending_replay_depth', 0) }}</div>
+    <div class="help">Offline elevation replay queue</div>
   </div>
   <div class="tile">
     <div class="label">Memory Sweeper</div>
@@ -33,7 +34,7 @@
     <div class="value small">{{ server.get('database', 'unknown') }}</div>
   </div>
   <div class="tile">
-    <div class="label">Behavioral Counters</div>
+    <div class="label">Behavioral counters</div>
     <div class="value small">{{ server.get('behavioral_counters_latest_at') or 'none' }}</div>
   </div>
 </div>

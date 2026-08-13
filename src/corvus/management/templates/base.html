@@ -8,7 +8,7 @@
   <script src="{{ static_url }}/htmx.min.js"></script>
   <script defer src="{{ static_url }}/alpine.min.js"></script>
 </head>
-<body>
+<body x-data="{ hash: '' }" x-init="hash = location.hash; window.addEventListener('hashchange', () => hash = location.hash)">
   {% if msg %}<div class="toast ok" x-data="{s:true}" x-show="s" x-init="setTimeout(()=>s=false,3500)">{{ msg }}</div>{% endif %}
   {% if err %}<div class="toast err" x-data="{s:true}" x-show="s" x-init="setTimeout(()=>s=false,6000)">{{ err }}</div>{% endif %}
   <div class="layout">
@@ -21,15 +21,15 @@
         {% for item in nav %}
         <li class="nav-item {% if item.id == active %}active{% endif %}">
           <a href="{{ prefix }}{{ item.path }}">
-            <span class="nav-ico">{{ item.label[0] }}</span>
+            <span class="nav-ico">{{ item.mark or item.label[:2] }}</span>
             <span>{{ item.label }}</span>
           </a>
           {% if item.id == active and item.subs %}
           <ul class="subnav">
             {% for sub in item.subs %}
-            <li><a href="{{ prefix }}{{ item.path }}{{ sub.anchor }}">
+            <li><a href="{{ prefix }}{{ item.path }}{{ sub.anchor }}"
+                   :class="{ 'active': hash === '{{ sub.anchor }}' || (hash === '' && {{ loop.first | tojson }}) }">
               {{ sub.label }}
-              {% if sub.badge %}<span class="badge {{ sub.badge }}">{{ sub.badge }}</span>{% endif %}
             </a></li>
             {% endfor %}
           </ul>

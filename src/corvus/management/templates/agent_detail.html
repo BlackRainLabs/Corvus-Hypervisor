@@ -1,27 +1,58 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, chips, empty_state %}
 {% block title %}{{ agent_id }} — Corvus Hypervisor{% endblock %}
 {% block heading %}Agent · {{ agent_id }}{% endblock %}
 {% block topmeta %}<span class="mono">{{ manifest_hash[:16] }}</span>{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.agent_detail) }}
 <p><a href="{{ prefix }}/agents">← All agents</a></p>
 
 <div class="section">
-  <h2>Lifecycle</h2>
+  <h2>Lifecycle {{ section_hint('editable') }}</h2>
+  <p class="help">Status: <span class="badge {% if agent_status == 'running' %}ok{% elif agent_status in ['failed','degraded'] %}danger{% elif agent_status == 'stopped' %}muted{% else %}warn{% endif %}">{{ agent_status }}</span></p>
   <div class="btn-row">
-    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/launch"><button class="btn primary" type="submit">Launch VM</button></form>
-    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/stop"><button class="btn" type="submit">Stop VM</button></form>
+    {% if agent_status in ['running', 'starting', 'degraded'] %}
+    <button class="btn primary" type="button" disabled>Launch VM</button>
+    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/stop" onsubmit="return confirm('Stop VM for {{ agent_id }}?');">
+      <button class="btn" type="submit">Stop VM</button>
+    </form>
+    {% else %}
+    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/launch" onsubmit="return confirm('Launch VM for {{ agent_id }}?');">
+      <button class="btn primary" type="submit">Launch VM</button>
+    </form>
+    <button class="btn" type="button" disabled>Stop VM</button>
+    {% endif %}
+    <a class="btn sm" href="{{ prefix }}/security#grants">Related grants</a>
+    <a class="btn sm" href="{{ prefix }}/audit?agent_id={{ agent_id }}">Audit for this agent</a>
   </div>
 </div>
 
 <div class="section">
-  <h2>VM Instances <span class="badge informational">{{ vms | length }}</span></h2>
+  <h2>Capability summary {{ section_hint('live') }}</h2>
+  <div class="card">
+    <div class="kv">
+      <dt>Tools (Engine 1)</dt><dd>{{ chips(summary.tools) }}</dd>
+      <dt>Channels (Engine 2)</dt><dd>{{ chips(summary.platforms) }}</dd>
+      <dt>LLM providers</dt><dd>{{ chips(summary.providers) }}</dd>
+      <dt>Models</dt><dd>{{ chips(summary.models) }}</dd>
+      <dt>Tool execution</dt><dd><span class="badge info">{{ summary.tool_execution_mode }}</span> {% if summary.provider_tools %}{{ chips(summary.provider_tools) }}{% endif %}</dd>
+      <dt>Memory (Engine 4)</dt><dd>{{ chips(summary.namespaces) }}</dd>
+      <dt>Skills</dt><dd>{{ chips(summary.skills) }}</dd>
+      <dt>Workspaces</dt><dd>{{ chips(summary.workspaces) }}</dd>
+      <dt>Rootfs / resources</dt><dd>{{ summary.rootfs_image or '-' }} · {{ summary.memory_mb or '-' }} MB · {{ summary.vcpu_count or '-' }} vCPU</dd>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>VM Instances <span class="badge info">{{ vms | length }}</span> {{ section_hint('live') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Instance</th><th>Status</th><th>PID</th><th>Alive</th><th>CID</th><th>Heartbeat</th><th>Error</th></tr></thead>
       <tbody>
       {% for vm in vms %}
         <tr>
-          <td class="mono">{{ vm.get('vm_instance_id', '')[:12] }}</td>
+          <td class="mono" title="{{ vm.get('vm_instance_id', '') }}">{{ vm.get('vm_instance_id', '')[:12] }}</td>
           <td><span class="badge {% if vm.get('status') == 'running' %}ok{% elif vm.get('status') in ['failed','degraded'] %}danger{% else %}warn{% endif %}">{{ vm.get('status') }}</span></td>
           <td>{{ vm.get('pid') or '-' }}</td>
           <td>{{ 'yes' if vm.get('pid_alive') else 'no' }}</td>
@@ -30,7 +61,7 @@
           <td class="faint">{{ vm.get('last_error') or '-' }}</td>
         </tr>
       {% else %}
-        <tr><td colspan="7" class="empty">No VM instances</td></tr>
+        <tr><td colspan="7">{{ empty_state('No VM instances') }}</td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -38,7 +69,7 @@
 </div>
 
 <div class="section">
-  <h2>Memory Namespaces <span class="badge edit">edit</span></h2>
+  <h2>Memory Namespaces {{ section_hint('editable') }}</h2>
   {% for ns in namespaces %}
   <div class="card">
     <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/namespaces/{{ ns.get('namespace') }}">
@@ -48,26 +79,26 @@
         <span class="faint">{{ ns.get('retention_policy') }}</span>
       </div>
       <div class="form-row cols-3">
-        <div class="field"><label>max_records</label><input name="max_records" type="number" value="{{ ns.get('quota', {}).get('max_records') }}"></div>
-        <div class="field"><label>max_record_bytes</label><input name="max_record_bytes" type="number" value="{{ ns.get('quota', {}).get('max_record_bytes') }}"></div>
-        <div class="field"><label>default_ttl_seconds</label><input name="default_ttl_seconds" type="number" value="{{ ns.get('quota', {}).get('default_ttl_seconds') or '' }}"></div>
+        <div class="field"><label>Max records</label><input name="max_records" type="number" value="{{ ns.get('quota', {}).get('max_records') }}"></div>
+        <div class="field"><label>Max record bytes</label><input name="max_record_bytes" type="number" value="{{ ns.get('quota', {}).get('max_record_bytes') }}"></div>
+        <div class="field"><label>Default TTL (seconds)</label><input name="default_ttl_seconds" type="number" value="{{ ns.get('quota', {}).get('default_ttl_seconds') or '' }}"></div>
       </div>
       <button class="btn sm primary" type="submit">Update quota</button>
     </form>
   </div>
   {% else %}
-  <div class="empty">No namespaces assigned</div>
+  {{ empty_state('No namespaces assigned. Edit the manifest JSON below or recreate the agent with Engine 4 namespaces.') }}
   {% endfor %}
 </div>
 
 <div class="section">
-  <h2>Edit Manifest <span class="badge edit">edit</span></h2>
+  <h2>Edit Manifest {{ section_hint('editable') }}</h2>
   <div class="card">
-    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/patch">
+    <form method="post" action="{{ prefix }}/agents/{{ agent_id }}/patch" onsubmit="return confirm('Save manifest for {{ agent_id }}? Engine, workspace, rootfs, and skills changes require the VM to be stopped.');">
       <div class="field">
         <label>Manifest JSON</label>
         <textarea name="manifest_json" rows="18" class="mono" required>{{ manifest_json }}</textarea>
-        <div class="help">Engine/workspace/rootfs/skills changes require the VM to be stopped.</div>
+        <div class="help">Engine, workspace, rootfs, and skills changes require the VM to be stopped. Use the summary above as a guide; JSON remains the day-2 editor.</div>
       </div>
       <button class="btn primary" type="submit">Save manifest</button>
     </form>
@@ -75,7 +106,10 @@
 </div>
 
 <div class="section">
-  <h2>Resolved Manifest <span class="badge informational">informational</span></h2>
-  <pre class="code">{{ manifest_json }}</pre>
+  <h2>Resolved Manifest {{ section_hint('live') }}</h2>
+  <details class="inline">
+    <summary>Show resolved snapshot</summary>
+    <div class="body"><pre class="code">{{ manifest_json }}</pre></div>
+  </details>
 </div>
 {% endblock %}

@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
 {% block title %}{{ user.get('id') }} — Corvus Hypervisor{% endblock %}
 {% block heading %}User · {{ user.get('id') }}{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.user_detail) }}
 <p><a href="{{ prefix }}/users">← All users</a></p>
 <div class="section">
-  <h2>Edit Profile <span class="badge edit">edit</span></h2>
+  <h2>Edit Profile {{ section_hint('editable') }}</h2>
   <div class="card">
     <form method="post" action="{{ prefix }}/users/create">
       <input type="hidden" name="return_to" value="/users/{{ user.get('id') }}">
@@ -19,9 +21,28 @@
         </div>
       </div>
       <div class="form-row cols-3">
-        <div class="field"><label>Groups</label><input name="groups" value="{{ user.get('groups', []) | join(', ') }}"></div>
-        <div class="field"><label>Privileges</label><input name="privileges" value="{{ user.get('privileges', []) | join(', ') }}"></div>
-        <div class="field"><label>Allowed Agents</label><input name="allowed_agents" value="{{ user.get('allowed_agents', []) | join(', ') }}"></div>
+        <div class="field"><label>Groups</label>
+          <select name="groups" multiple>
+            {% for gid in group_ids %}
+            <option value="{{ gid }}" {% if gid in user.get('groups', []) %}selected{% endif %}>{{ gid }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Privileges</label>
+          <select name="privileges" multiple>
+            {% for p in privileges %}
+            <option value="{{ p }}" {% if p in user.get('privileges', []) %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Allowed Agents</label>
+          <select name="allowed_agents" multiple>
+            <option value="*" {% if '*' in user.get('allowed_agents', []) %}selected{% endif %}>* (all)</option>
+            {% for aid in agent_ids %}
+            <option value="{{ aid }}" {% if aid in user.get('allowed_agents', []) %}selected{% endif %}>{{ aid }}</option>
+            {% endfor %}
+          </select>
+        </div>
       </div>
       <div class="form-row">
         <div class="field"><label>Aliases (JSON array)</label>
@@ -34,13 +55,13 @@
       </div>
       <button class="btn primary" type="submit">Save changes</button>
     </form>
-    <form method="post" action="{{ prefix }}/users/{{ user.get('id') }}/deactivate" style="margin-top:12px;" onsubmit="return confirm('Deactivate this user?');">
+    <form method="post" action="{{ prefix }}/users/{{ user.get('id') }}/deactivate" style="margin-top:12px;" onsubmit="return confirm('Deactivate user {{ user.get('id') }}?');">
       <button class="btn danger" type="submit">Deactivate user</button>
     </form>
   </div>
 </div>
 <div class="section">
-  <h2>Identity Aliases <span class="badge informational">informational</span></h2>
+  <h2>Identity Aliases {{ section_hint('live') }}</h2>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Platform</th><th>Value</th><th>Verified</th><th>Auth Method</th><th>Display Name</th></tr></thead>
@@ -53,13 +74,18 @@
           <td>{{ a.get('auth_method') }}</td>
           <td>{{ a.get('display_name') or '-' }}</td>
         </tr>
-      {% else %}<tr><td colspan="5" class="empty">No aliases</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="5">{{ empty_state('No aliases — edit the JSON field above') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 <div class="section">
-  <h2>Raw Profile <span class="badge informational">informational</span></h2>
-  <pre class="code">{{ user_json }}</pre>
+  <h2>Raw Profile {{ section_hint('live') }}</h2>
+  <details class="inline">
+    <summary>Show redacted profile JSON</summary>
+    <div class="body"><pre class="code">{{ user_json }}</pre></div>
+  </details>
 </div>
 {% endblock %}

@@ -1,15 +1,19 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, setting_row, chips, empty_state %}
 {% block title %}Inference — Corvus Hypervisor{% endblock %}
 {% block heading %}Inference{% endblock %}
 {% block topmeta %}LLM gateway{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.inference) }}
 <div class="tabs">
-  <a href="#providers">Providers</a><a href="#token-quotas">Token Quotas</a><a href="#runtime-settings">Runtime Settings</a>
+  <a href="#providers" :class="{ 'active': hash === '#providers' || hash === '' }">Providers</a>
+  <a href="#token-quotas" :class="{ 'active': hash === '#token-quotas' }">Token Quotas</a>
+  <a href="#runtime-settings" :class="{ 'active': hash === '#runtime-settings' }">Runtime Settings</a>
 </div>
 
 <div class="section" id="providers">
-  <h2>LLM Providers <span class="badge edit">edit</span></h2>
-  <p class="help">Edit any provider below and click Save. Credential refs are write-only after set (leave blank to keep the current value).</p>
+  <h2>LLM Providers {{ section_hint('editable') }}</h2>
+  <p class="help">Edit any provider below and click Save. Credential refs are write-only after set (leave blank to keep the current value). Hybrid hosted tools also need the agent manifest <span class="mono">tool_execution_mode</span>.</p>
   {% for p in providers %}
   <div class="card" style="margin-bottom:12px;">
     <form method="post" action="{{ prefix }}/inference/providers">
@@ -25,6 +29,7 @@
         <div class="field">
           <label>Supported models</label>
           <input name="supported_models" value="{{ p.get('supported_models', []) | join(', ') }}">
+          <div class="help">{{ chips(p.get('supported_models', [])) }}</div>
         </div>
       </div>
       <div class="form-row cols-3">
@@ -44,6 +49,19 @@
           <input name="allowed_hosted_tools" value="{{ p.get('allowed_hosted_tools', []) | join(', ') }}">
         </div>
       </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Quota class</label>
+          <select name="quota_class">
+            {% for qc in quota_classes %}
+            <option value="{{ qc }}" {% if (p.get('quota_class') or 'dev') == qc %}selected{% endif %}>{{ qc }}</option>
+            {% endfor %}
+            {% if p.get('quota_class') and p.get('quota_class') not in quota_classes %}
+            <option value="{{ p.get('quota_class') }}" selected>{{ p.get('quota_class') }}</option>
+            {% endif %}
+          </select>
+        </div>
+      </div>
       <div class="btn-row">
         <button class="btn primary" type="submit">Save {{ p.get('provider_id') }}</button>
       </div>
@@ -53,7 +71,7 @@
     </form>
   </div>
   {% else %}
-  <p class="empty">No providers configured</p>
+  {{ empty_state('No providers configured') }}
   {% endfor %}
 
   <div class="card" style="margin-top:12px;">
@@ -71,20 +89,26 @@
         </div>
         <div class="field"><label>Allowed hosted tools</label><input name="allowed_hosted_tools" placeholder="openai:web_search"></div>
       </div>
+      <div class="form-row">
+        <div class="field"><label>Quota class</label>
+          <select name="quota_class">{% for qc in quota_classes %}<option value="{{ qc }}">{{ qc }}</option>{% endfor %}</select>
+        </div>
+      </div>
       <button class="btn primary" type="submit">Create provider</button>
     </form>
   </div>
 </div>
 
 <div class="section" id="token-quotas">
-  <h2>Token Quotas &amp; Usage <span class="badge edit">edit</span></h2>
+  <h2>Token Quotas &amp; Usage {{ section_hint('editable') }}</h2>
+  <p class="help">Counters appear after LLM traffic. <strong>Used</strong> is a live counter — lowering it resets usage, it is not a second limit. Create or raise default budgets under <a href="{{ prefix }}/security#quotas">Security quotas</a> or runtime settings below.</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Key</th><th>Used</th><th>Limit</th><th>Window</th><th>Reset</th><th>Update</th></tr></thead>
+      <thead><tr><th>Quota</th><th>Used</th><th>Limit</th><th>Window</th><th>Reset</th><th>Update</th></tr></thead>
       <tbody>
       {% for q in token_quotas %}
         <tr>
-          <td class="mono">{{ q.get('key') }}</td>
+          <td><strong>{{ q.get('key') | quota_label }}</strong><br><span class="mono faint">{{ q.get('key') }}</span></td>
           <td>{{ q.get('used') }}</td>
           <td>{{ q.get('limit') }}</td>
           <td>{{ q.get('window_type') }}</td>
@@ -94,30 +118,27 @@
               <input type="hidden" name="key" value="{{ q.get('key') }}">
               <input type="hidden" name="window_type" value="{{ q.get('window_type') }}">
               <input type="hidden" name="return_to" value="/inference">
-              <input name="limit" type="number" value="{{ q.get('limit') }}" style="width:100px;">
-              <input name="used" type="number" value="{{ q.get('used') }}" style="width:90px;">
+              <input name="limit" type="number" value="{{ q.get('limit') }}" style="width:100px;" title="Limit">
+              <input name="used" type="number" value="{{ q.get('used') }}" style="width:90px;" title="Used (counter reset)">
               <button class="btn sm primary" type="submit">Save</button>
             </form>
           </td>
         </tr>
-      {% else %}<tr><td colspan="6" class="empty">No token quota counters yet</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="6">{{ empty_state('No token quota counters yet — they appear after LLM use, or set limits under Security.', prefix + '/security#quotas', 'Open Security quotas') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
 <div class="section" id="runtime-settings">
-  <h2>Runtime Settings <span class="badge edit">edit</span></h2>
+  <h2>Runtime Settings {{ section_hint('editable') }}</h2>
   <div class="card">
     <form method="post" action="{{ prefix }}/settings/patch">
       <input type="hidden" name="return_to" value="/inference">
       {% for s in inference_settings %}
-      <div class="form-row">
-        <div class="field">
-          <label>{{ s.key }}{% if s.restart_required %} <span class="badge warn">restart_required</span>{% endif %}{% if s.secret %} <span class="badge danger">secret</span>{% endif %}</label>
-          <input name="setting_{{ s.key }}" value="{{ '' if s.secret else s.value }}" placeholder="{{ '********' if s.secret else '' }}">
-        </div>
-      </div>
+        {{ setting_row(s) }}
       {% else %}
       <div class="kv">
         <dt>Default provider</dt><dd>{{ settings.default_provider }}</dd>
