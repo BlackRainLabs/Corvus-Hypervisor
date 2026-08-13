@@ -141,6 +141,7 @@ class NavItem:
 
 NAV: tuple[NavItem, ...] = (
     NavItem("summary", "Overview", "/", mark="OV"),
+    NavItem("chat", "Chat", "/chat", mark="CH"),
     NavItem(
         "agents",
         "Agents",

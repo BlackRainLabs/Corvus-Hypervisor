@@ -184,4 +184,9 @@
 - Sidebar taxonomy badges removed; login/docs match username + PIN/password
 - Agent create applies self launch grants from namespace permissions when launch-grants JSON is empty
 
+## Phase 9.6: Operator chat + test LLM — Implemented
+- `POST /v1/agents/{id}/chat` + `/ui/chat` playground through `LlmGatewayService` (manifest allowlists, audit, token quotas; text-only)
+- Seeded stub provider replies in-console; `make dev-up` starts dummy LLM on `:8765` for `dummy-http`
+- Engine 2 `CORVUS_CHAT_TEXT` for runtime turns
+
 **Black Rain Labs - Research & Development Division**

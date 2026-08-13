@@ -84,7 +84,8 @@ make dev-down
 ```
 
 Management API: `http://127.0.0.1:8080` with header `X-API-Key: dev-api-key`  
-Operator Console: `http://127.0.0.1:8080/ui`  
+Operator Console: `http://127.0.0.1:8080/ui` (sign in `admin-user` / `0000`)  
+Chat: `http://127.0.0.1:8080/ui/chat` — seeded `test-agent-01` uses the in-process stub LLM  
 OpenAPI docs: `http://127.0.0.1:8080/docs` (while the server is running)
 
 ```bash

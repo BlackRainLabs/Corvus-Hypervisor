@@ -8,14 +8,15 @@
 
 # Corvus Operations Guide
 
-Operator reference for running, observing, and regression-testing Corvus Hypervisor (Phases 6–9.5).
+Operator reference for running, observing, and regression-testing Corvus Hypervisor (Phases 6–9.6).
 
 ## Daily development (native TCP)
 
 ```bash
 make install
-make dev-up          # corvus-server + corvus-node
+make dev-up          # corvus-server + corvus-node + dummy LLM (:8765)
 make dev-status
+# Console chat: http://127.0.0.1:8080/ui/chat  (admin-user / 0000)
 corvus-runtime --once --all-engines
 make dev-down
 ```
@@ -56,12 +57,17 @@ Management API process at `http://<mgmt_host>:<mgmt_port>/ui` (default
 - Sign in at `/ui/login` with a Corvus user id that has the `admin` or `operator`
   role, plus that user's PIN or password. A signed HttpOnly session cookie is set;
   the Management API key is used only in-process and is never stored in the browser.
-- Left sidebar categories: **Summary** (live health), **Agents** (create / launch /
-  stop / manifest / namespace quotas), **Tools & Skills** (catalogs), **Inference**
+- Left sidebar categories: **Summary** (live health), **Chat** (operator LLM
+  playground via the server gateway), **Agents** (create / launch / stop /
+  manifest / namespace quotas), **Tools & Skills** (catalogs), **Inference**
   (LLM providers, token quotas), **Memory** (namespaces, sweeper, encryption),
   **Users & Access**, **Security** (RBAC rules + dry-run simulator, grants,
   elevations, quotas, behavioral thresholds), **Audit** (filterable log browser),
   **System** (health, metrics, server settings).
+- Dev login (seeded): username `admin-user`, PIN `0000`. Chat defaults to
+  `test-agent-01` + in-process `stub` (echoes your text). `dummy-http` /
+  `dummy-v1` needs that pair on the agent manifest; `make dev-up` starts the
+  dummy API on `http://127.0.0.1:8765/v1`.
 - The console is a presentation layer: every action calls the same `/v1` endpoints
   in-process, so all validation and audit behavior is identical to direct API use.
 
@@ -87,6 +93,7 @@ primary day-2 ops path.
 | Sidebar section | Taxonomy |
 |-----------------|----------|
 | Overview health tiles / pending elevations list | informational (elevations: link to Security) |
+| Chat agent/provider/model + send | editable; transcript is local browser state (informational) |
 | Agents list, create, detail editor, launch/stop, namespace quotas | editable; resolved manifest JSON dump informational |
 | Tools / Skills / Workspaces catalogs | editable; exec-policy help informational |
 | Inference providers | editable; token quotas editable; secrets write-only |
@@ -195,15 +202,31 @@ Turn timeout: `CORVUS_TURN_TIMEOUT_SECONDS` (default **120**) bounds a single ag
 
 Correlation depth: multi-hop tool turns increment chain depth; default `CORVUS_MAX_CHAIN_DEPTH` is **16**.
 
+### Operator chat (console + API)
+
+`POST /v1/agents/{agent_id}/chat` sends a chat-completion request through the
+same `LlmGatewayService` Engine 3 uses (manifest allowlists, credentials, audit
+`llm_completion` + `api_mutation`, token quotas). It is **text-only**: no local
+or provider-hosted tools are executed. Console page: `/ui/chat`.
+
+```bash
+curl -sS -H "X-API-Key: dev-api-key" -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"hello"}]}' \
+  http://127.0.0.1:8080/v1/agents/test-agent-01/chat
+```
+
+Stub reply includes the user text (`Stub LLM response: hello`). Runtime turns
+can pass custom user text with `CORVUS_CHAT_TEXT='…' make run-turn`.
+
 ### Local dummy LLM API (testing)
 
-For manual or integration testing of the OpenAI-compatible HTTP path, run the bundled dummy server:
+`make dev-up` starts the dummy server automatically. For a standalone instance:
 
 ```bash
 corvus-dummy-llm --port 8765
 ```
 
-It serves `POST /v1/chat/completions` (JSON or SSE when `stream: true`) and returns a fixed success payload (`Success: simulated LLM response for testing.`). Point the `dummy-http` provider in `config/llm_providers.yaml` at `http://127.0.0.1:8765/v1` (default). Pytest starts an ephemeral instance automatically in `tests/test_llm_dummy_api.py` and `tests/test_llm_streaming.py`.
+It serves `POST /v1/chat/completions` (JSON or SSE when `stream: true`) and returns a fixed success payload (`Success: simulated LLM response for testing.`). Point the `dummy-http` provider in `config/llm_providers.yaml` at `http://127.0.0.1:8765/v1` (default). Pytest starts an ephemeral instance automatically in `tests/test_llm_dummy_api.py`, `tests/test_llm_streaming.py`, and `tests/test_management.py`.
 
 ## Elevation operations
 

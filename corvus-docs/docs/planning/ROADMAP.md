@@ -37,6 +37,7 @@
   - ~~9.3 Catalog CRUD (tools/skills/workspaces/memory namespaces in SQLite)~~
   - ~~9.4 Runtime settings + provider registry in GUI (`/v1/settings`, LLM provider CRUD, restart_required bind knobs)~~
   - ~~9.5 Operator Console UX polish (labels, confirmations, dropdowns, hash tabs; JSON editors kept)~~
+  - ~~9.6 Operator chat playground (`/ui/chat` + `/v1/agents/{id}/chat`) with stub/dummy test LLM~~
 - Skill runtime beyond catalog placeholders; Firecracker workspace drive mounts (next)
 
 ## Medium Term (3-6 Months)

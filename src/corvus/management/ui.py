@@ -15,7 +15,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -40,6 +40,7 @@ from corvus.management.ui_copy import (
     annotate_settings,
     annotate_settings_groups,
     as_list,
+    chat_agent_options,
     datetime_local_to_iso,
     engine_summary,
     fleet_counts,
@@ -237,6 +238,76 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             recent_audit=audit.get("logs", []),
             fleet=fleet_counts(agent_list),
         )
+
+    # ---- Chat -------------------------------------------------------------
+    @router.get("/chat", response_class=HTMLResponse)
+    async def chat_page(request: Request) -> HTMLResponse:
+        require_session(request)
+        agents = await api.get("/v1/agents")
+        providers = await api.get("/v1/catalog/llm-providers")
+        return render(
+            request,
+            "chat.html",
+            "chat",
+            chat_agents=chat_agent_options(agents.get("agents", [])),
+            catalog_providers=providers.get("llm_providers", []),
+        )
+
+    @router.post("/chat/send")
+    async def chat_send(request: Request) -> JSONResponse:
+        require_session(request)
+        try:
+            body = await request.json()
+        except ValueError:
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": "Invalid JSON",
+                    "error_code": "CHAT_PAYLOAD_INVALID",
+                },
+                status_code=400,
+            )
+        if not isinstance(body, dict):
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": "Request body must be an object",
+                    "error_code": "CHAT_PAYLOAD_INVALID",
+                },
+                status_code=400,
+            )
+        agent_id = str(body.get("agent_id") or "").strip()
+        if not agent_id:
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": "agent_id is required",
+                    "error_code": "CHAT_AGENT_REQUIRED",
+                },
+                status_code=422,
+            )
+        ok, data, status = await api.call(
+            "POST",
+            f"/v1/agents/{agent_id}/chat",
+            json={
+                "messages": body.get("messages") or [],
+                "provider": body.get("provider") or None,
+                "model": body.get("model") or None,
+                "user_id": session_user_id(request.cookies.get(COOKIE_NAME)),
+            },
+        )
+        if not ok:
+            detail = data if isinstance(data, dict) else {}
+            return JSONResponse(
+                {
+                    "success": False,
+                    "error": _error_text(data, "Chat failed"),
+                    "error_code": detail.get("code") or "CHAT_FAILED",
+                    "details": detail,
+                },
+                status_code=status,
+            )
+        return JSONResponse(data if isinstance(data, dict) else {"success": ok}, status_code=status)
 
     @router.get("/partials/health", response_class=HTMLResponse)
     async def health_partial(request: Request) -> HTMLResponse:

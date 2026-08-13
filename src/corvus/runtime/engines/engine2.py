@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from uuid import UUID, uuid4
 
 from corvus.protocol import (
@@ -35,6 +36,7 @@ class GatewayEngine(BaseEngine):
 
         turn_id = UUID(coord.read().get("correlation_id", str(uuid4())))
         logger.info("engine2 starting turn %s", turn_id)
+        user_text = os.environ.get("CORVUS_CHAT_TEXT", "").strip() or "Hello from gateway"
 
         uq = FrameworkMessage(
             source=MessageSource(
@@ -54,7 +56,7 @@ class GatewayEngine(BaseEngine):
                 "user_id": "test-user",
                 "platform": "api",
                 "channel_id": "default",
-                "content": {"text": "Hello from gateway"},
+                "content": {"text": user_text},
             },
         )
         uq_ack = await self.ipc.submit_and_wait(uq)
@@ -66,7 +68,7 @@ class GatewayEngine(BaseEngine):
         coord.set_phase(
             TurnPhase.COLLECT,
             correlation_id=str(turn_id),
-            user_text="Hello from gateway",
+            user_text=user_text,
         )
         reached = await coord.await_phase_in({TurnPhase.RESPOND, TurnPhase.ABORTED}, timeout=30.0)
         if reached != TurnPhase.RESPOND:

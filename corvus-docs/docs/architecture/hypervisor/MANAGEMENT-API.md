@@ -101,6 +101,20 @@ group:
 - `GET /v1/agents/{id}/vms` — List VM lifecycle records for an agent
 - `POST /v1/agents/{id}/launch` — Launch an agent microVM from its resolved manifest
 - `POST /v1/agents/{id}/stop` — Stop the active microVM for an agent
+- `POST /v1/agents/{id}/chat` — Operator chat completion via the server LLM gateway (manifest provider/model allowlists; text-only; audited + token-metered)
+
+**POST /v1/agents/{id}/chat request:**
+
+```yaml
+messages:                            # OpenAI-style roles: system | user | assistant
+  - role: user
+    content: string
+provider: string | null              # optional; defaults to manifest / server default
+model: string | null                 # optional; defaults to first allowed model
+user_id: string | null               # optional quota/audit identity
+```
+
+**Response:** `success`, `reply`, `provider`, `model`, `usage`, `finish_reason`, `correlation_id`, `tool_calls` (unused in operator chat; tools are not executed).
 
 **POST /v1/agents request (manifest schema):**
 
@@ -327,6 +341,7 @@ error:
 - It is a presentation layer only: every console action calls these same `/v1` endpoints in-process (httpx `ASGITransport` with the server-held API key), so validation and audit are identical to direct API use.
 - Phase 9 makes catalogs, settings, providers, and day-2 agent/user/group surfaces editable; health tiles, Prometheus dump, audit bodies, and resolved manifest JSON remain informational. Secrets are write-only after set.
 - Phase 9.5 polishes operator UX (labels, confirmations, catalog dropdowns, hash tabs) without replacing JSON editors or adding new `/v1` surfaces.
+- Phase 9.6 adds `/ui/chat` over `POST /v1/agents/{id}/chat` (operator LLM playground; stub/dummy test providers).
 - Sign-in uses a Corvus `admin`/`operator` username plus PIN or password and sets a signed HttpOnly session cookie. The server-held Management API key is used only for in-process `/v1` calls. Configurable via `CORVUS_UI_ENABLED`, `CORVUS_UI_SESSION_SECRET`, `CORVUS_UI_PATH_PREFIX`. Assets (HTMX, Alpine.js) are vendored — no external network required.
 
 ## Rate limiting
