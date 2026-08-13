@@ -2,13 +2,13 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-08-13
 **Related Documents:** ../architecture/hypervisor/MANAGEMENT-API.md, COMPONENT-STATUS.md, PHASES.md, ROADMAP.md, ../../../CHANGES.md
 **Must Update on Change:** ../../../CHANGES.md
 
 # Corvus Operations Guide
 
-Operator reference for running, observing, and regression-testing Corvus Hypervisor (Phases 6–9).
+Operator reference for running, observing, and regression-testing Corvus Hypervisor (Phases 6–9.5).
 
 ## Daily development (native TCP)
 
@@ -53,8 +53,9 @@ A server-rendered operator console ships with the server and is served by the sa
 Management API process at `http://<mgmt_host>:<mgmt_port>/ui` (default
 `http://127.0.0.1:8080/ui`).
 
-- Sign in at `/ui/login` with the Management API key (`CORVUS_API_KEY`). A signed
-  HttpOnly session cookie is set; the raw key is not stored in the browser afterward.
+- Sign in at `/ui/login` with a Corvus user id that has the `admin` or `operator`
+  role, plus that user's PIN or password. A signed HttpOnly session cookie is set;
+  the Management API key is used only in-process and is never stored in the browser.
 - Left sidebar categories: **Summary** (live health), **Agents** (create / launch /
   stop / manifest / namespace quotas), **Tools & Skills** (catalogs), **Inference**
   (LLM providers, token quotas), **Memory** (namespaces, sweeper, encryption),
@@ -67,7 +68,8 @@ Management API process at `http://<mgmt_host>:<mgmt_port>/ui` (default
 ### Phase 9 product rule — GUI field taxonomy
 
 Mutable control-plane state is **editable** in the GUI. Read-only is reserved for
-informational surfaces. Every sidebar field/section is tagged as one of:
+informational surfaces. Section headings use quiet “Editable” / “Live view” hints;
+the sidebar no longer prints taxonomy tokens. Every field/section is tagged as one of:
 
 | Tag | Meaning |
 |-----|---------|

@@ -2,7 +2,7 @@
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-08-13
 **Related Documents:** OVERVIEW.md, hypervisor/RBAC-POLICY.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, memory/ARCHITECTURE.md, ../../planning/OPERATIONS.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.
@@ -326,7 +326,8 @@ error:
 - A server-rendered operator console is mounted on the same app at `/ui` (Phase 8+; see [OPERATIONS.md](../../planning/OPERATIONS.md)).
 - It is a presentation layer only: every console action calls these same `/v1` endpoints in-process (httpx `ASGITransport` with the server-held API key), so validation and audit are identical to direct API use.
 - Phase 9 makes catalogs, settings, providers, and day-2 agent/user/group surfaces editable; health tiles, Prometheus dump, audit bodies, and resolved manifest JSON remain informational. Secrets are write-only after set.
-- Sign-in uses the Management API key and sets a signed HttpOnly session cookie. Configurable via `CORVUS_UI_ENABLED`, `CORVUS_UI_SESSION_SECRET`, `CORVUS_UI_PATH_PREFIX`. Assets (HTMX, Alpine.js) are vendored — no external network required.
+- Phase 9.5 polishes operator UX (labels, confirmations, catalog dropdowns, hash tabs) without replacing JSON editors or adding new `/v1` surfaces.
+- Sign-in uses a Corvus `admin`/`operator` username plus PIN or password and sets a signed HttpOnly session cookie. The server-held Management API key is used only for in-process `/v1` calls. Configurable via `CORVUS_UI_ENABLED`, `CORVUS_UI_SESSION_SECRET`, `CORVUS_UI_PATH_PREFIX`. Assets (HTMX, Alpine.js) are vendored — no external network required.
 
 ## Rate limiting
 

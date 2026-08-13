@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-08-13
 **Related Documents:** CHANGES.md
 **Must Update on Change:** CHANGES.md
 
@@ -36,6 +36,7 @@
   - ~~9.2 Missing Management API + UI (`PATCH` agents, `PATCH`/`DELETE` users, groups CRUD)~~
   - ~~9.3 Catalog CRUD (tools/skills/workspaces/memory namespaces in SQLite)~~
   - ~~9.4 Runtime settings + provider registry in GUI (`/v1/settings`, LLM provider CRUD, restart_required bind knobs)~~
+  - ~~9.5 Operator Console UX polish (labels, confirmations, dropdowns, hash tabs; JSON editors kept)~~
 - Skill runtime beyond catalog placeholders; Firecracker workspace drive mounts (next)
 
 ## Medium Term (3-6 Months)

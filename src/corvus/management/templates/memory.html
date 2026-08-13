@@ -1,18 +1,22 @@
 {% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, setting_row, empty_state %}
 {% block title %}Memory — Corvus Hypervisor{% endblock %}
 {% block heading %}Memory{% endblock %}
 {% block topmeta %}central memory service{% endblock %}
 {% block content %}
+{{ page_lead(page_leads.memory) }}
 <div class="tabs">
-  <a href="#namespaces">Namespaces</a><a href="#sweeper">Retention Sweeper</a><a href="#encryption">Encryption</a>
+  <a href="#namespaces" :class="{ 'active': hash === '#namespaces' || hash === '' }">Namespaces</a>
+  <a href="#sweeper" :class="{ 'active': hash === '#sweeper' }">Retention Sweeper</a>
+  <a href="#encryption" :class="{ 'active': hash === '#encryption' }">Encryption</a>
 </div>
 
 <div class="section" id="namespaces">
-  <h2>Namespace Catalog <span class="badge edit">edit</span></h2>
-  <p class="help">Per-agent quota overrides are edited under each agent's detail page.</p>
+  <h2>Namespace Catalog {{ section_hint('editable') }}</h2>
+  <p class="help">Per-agent quota overrides are edited on each <a href="{{ prefix }}/agents">agent detail</a> page.</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Namespace</th><th>Retention Policy</th><th>max_records</th><th>max_record_bytes</th><th>default_ttl_seconds</th><th></th></tr></thead>
+      <thead><tr><th>Namespace</th><th>Retention Policy</th><th>Max records</th><th>Max record bytes</th><th>Default TTL (seconds)</th><th></th></tr></thead>
       <tbody>
       {% for n in namespaces %}
         {% set q = n.get('quota', {}) %}
@@ -29,34 +33,48 @@
                 <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces">
                   <input type="hidden" name="name" value="{{ n.get('name') }}">
                   <div class="form-row cols-3">
-                    <div class="field"><label>Retention policy</label><input name="retention_policy" value="{{ n.get('retention_policy') }}"></div>
-                    <div class="field"><label>max_records</label><input name="max_records" type="number" value="{{ q.get('max_records') or 1000 }}"></div>
-                    <div class="field"><label>max_record_bytes</label><input name="max_record_bytes" type="number" value="{{ q.get('max_record_bytes') or 65536 }}"></div>
+                    <div class="field"><label>Retention policy</label>
+                      <select name="retention_policy">
+                        {% for pol in retention_policies %}
+                        <option value="{{ pol }}" {% if n.get('retention_policy') == pol %}selected{% endif %}>{{ pol }}</option>
+                        {% endfor %}
+                        {% if n.get('retention_policy') and n.get('retention_policy') not in retention_policies %}
+                        <option value="{{ n.get('retention_policy') }}" selected>{{ n.get('retention_policy') }} (custom)</option>
+                        {% endif %}
+                      </select>
+                    </div>
+                    <div class="field"><label>Max records</label><input name="max_records" type="number" value="{{ q.get('max_records') or 1000 }}"></div>
+                    <div class="field"><label>Max record bytes</label><input name="max_record_bytes" type="number" value="{{ q.get('max_record_bytes') or 65536 }}"></div>
                   </div>
-                  <div class="field"><label>default_ttl_seconds</label><input name="default_ttl_seconds" type="number" value="{{ q.get('default_ttl_seconds') or '' }}" placeholder="optional"></div>
+                  <div class="field"><label>Default TTL (seconds)</label><input name="default_ttl_seconds" type="number" value="{{ q.get('default_ttl_seconds') or '' }}" placeholder="optional"></div>
                   <button class="btn sm primary" type="submit">Save changes</button>
                 </form>
-                <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces/{{ n.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete namespace template?');">
+                <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces/{{ n.get('name') }}/delete" style="margin-top:6px;" onsubmit="return confirm('Delete namespace template {{ n.get('name') }}? Running agents that still reference it may fail memory operations.');">
                   <button class="btn sm danger" type="submit">Delete namespace</button>
                 </form>
               </div>
             </details>
           </td>
         </tr>
-      {% else %}<tr><td colspan="6" class="empty">No namespaces</td></tr>{% endfor %}
+      {% else %}
+        <tr><td colspan="6">{{ empty_state('No namespaces') }}</td></tr>
+      {% endfor %}
       </tbody>
     </table>
   </div>
   <div class="card" style="margin-top:12px;">
+    <h3>Add namespace</h3>
     <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces">
       <div class="form-row cols-3">
         <div class="field"><label>Name</label><input name="name" required placeholder="shared-knowledge"></div>
-        <div class="field"><label>Retention policy</label><input name="retention_policy" value="agent-private"></div>
-        <div class="field"><label>max_records</label><input name="max_records" type="number" value="1000"></div>
+        <div class="field"><label>Retention policy</label>
+          <select name="retention_policy">{% for pol in retention_policies %}<option value="{{ pol }}" {% if pol == 'agent-private' %}selected{% endif %}>{{ pol }}</option>{% endfor %}</select>
+        </div>
+        <div class="field"><label>Max records</label><input name="max_records" type="number" value="1000"></div>
       </div>
       <div class="form-row">
-        <div class="field"><label>max_record_bytes</label><input name="max_record_bytes" type="number" value="65536"></div>
-        <div class="field"><label>default_ttl_seconds</label><input name="default_ttl_seconds" type="number" placeholder="optional"></div>
+        <div class="field"><label>Max record bytes</label><input name="max_record_bytes" type="number" value="65536"></div>
+        <div class="field"><label>Default TTL (seconds)</label><input name="default_ttl_seconds" type="number" placeholder="optional"></div>
       </div>
       <button class="btn primary" type="submit">Save namespace</button>
     </form>
@@ -64,17 +82,17 @@
 </div>
 
 <div class="section" id="sweeper">
-  <h2>Retention Sweeper <span class="badge edit">edit</span></h2>
+  <h2>Retention Sweeper {{ section_hint('editable') }}</h2>
   <div class="card">
     <div class="kv">
-      <dt>Status</dt><dd><span class="dot {{ 'ok' if settings.sweeper_running else 'danger' }}"></span> {{ 'running' if settings.sweeper_running else 'stopped' }} <span class="badge informational">informational</span></dd>
+      <dt>Status</dt><dd><span class="dot {{ 'ok' if settings.sweeper_running else 'danger' }}"></span> {{ 'running' if settings.sweeper_running else 'stopped' }} <span class="hint">Live view</span></dd>
     </div>
     <form method="post" action="{{ prefix }}/settings/patch">
       <input type="hidden" name="return_to" value="/memory">
       {% for s in memory_settings if s.key.startswith('memory_sweep') or s.key.startswith('memory_soft') or s.key == 'memory_writes_daily_limit' %}
-      <div class="form-row">
-        <div class="field"><label>{{ s.key }}</label><input name="setting_{{ s.key }}" value="{{ s.value }}"></div>
-      </div>
+        {{ setting_row(s) }}
+      {% else %}
+      <p class="muted">No sweeper settings seeded.</p>
       {% endfor %}
       <button class="btn primary" type="submit">Save sweeper settings</button>
     </form>
@@ -82,17 +100,14 @@
 </div>
 
 <div class="section" id="encryption">
-  <h2>Encryption at Rest <span class="badge edit">edit</span></h2>
+  <h2>Encryption at Rest {{ section_hint('editable') }}</h2>
   <div class="card">
     <form method="post" action="{{ prefix }}/settings/patch">
       <input type="hidden" name="return_to" value="/memory">
       {% for s in memory_settings if s.key in ['memory_encryption_enabled', 'memory_master_key'] %}
-      <div class="form-row">
-        <div class="field">
-          <label>{{ s.key }}{% if s.secret %} <span class="badge danger">secret</span>{% endif %}</label>
-          <input name="setting_{{ s.key }}" value="{{ '' if s.secret else s.value }}" placeholder="{{ '********' if s.secret else '' }}">
-        </div>
-      </div>
+        {{ setting_row(s) }}
+      {% else %}
+      <p class="muted">No encryption settings seeded.</p>
       {% endfor %}
       <button class="btn primary" type="submit">Save encryption settings</button>
     </form>

@@ -12,6 +12,12 @@ from corvus.management.ui_client import (
     sign_session_for_user,
     verify_session,
 )
+from corvus.management.ui_copy import (
+    engine_summary,
+    humanize_key,
+    quota_label,
+    redact_user_profile,
+)
 
 # Seeded by AppContext.startup(): admin-user has role "admin" and PIN "0000".
 ADMIN_USER = "admin-user"
@@ -37,6 +43,24 @@ async def _login(
     assert COOKIE_NAME in resp.cookies or COOKIE_NAME in {
         c.split("=")[0] for c in resp.headers.get_list("set-cookie")
     }
+
+
+def test_ui_copy_helpers():
+    assert humanize_key("llm_request_timeout_seconds") == "LLM Request Timeout Seconds"
+    assert quota_label("agent:test-agent-01:llm_tokens") == "LLM tokens · test-agent-01"
+    redacted = redact_user_profile({"id": "u1", "credential_hash": "abc123"})
+    assert redacted["credential_hash"] == "********"
+    summary = engine_summary(
+        {
+            "engines": {
+                "engine1": {"tools": ["echo"]},
+                "engine3": {"allowed_providers": ["stub"], "tool_execution_mode": "local"},
+                "engine4": {"namespaces": ["private"]},
+            }
+        }
+    )
+    assert summary["tools"] == ["echo"]
+    assert summary["tool_execution_mode"] == "local"
 
 
 def test_session_cookie_roundtrip():
@@ -90,6 +114,8 @@ async def test_login_page_renders(app_ctx):
         resp = await client.get("/ui/login")
         assert resp.status_code == 200
         assert "Operator Console" in resp.text
+        assert "admin" in resp.text
+        assert "operator" in resp.text
 
 
 @pytest.mark.asyncio
@@ -120,6 +146,8 @@ async def test_summary_shows_health(app_ctx):
         await _login(client)
         resp = await client.get("/ui/")
         assert "Active Sessions" in resp.text
+        assert "Agent fleet" in resp.text
+        assert "Pending elevation replay" in resp.text
         # HTMX partial endpoint
         partial = await client.get("/ui/partials/health")
         assert partial.status_code == 200
@@ -150,6 +178,7 @@ async def test_agent_create_and_detail(app_ctx):
         assert detail.status_code == 200
         assert "ui-agent" in detail.text
         assert "Resolved Manifest" in detail.text
+        assert "Capability summary" in detail.text
 
 
 @pytest.mark.asyncio
@@ -269,6 +298,36 @@ async def test_user_create_and_detail(app_ctx):
 
 
 @pytest.mark.asyncio
+async def test_agent_create_applies_namespace_permissions(app_ctx):
+    app = create_app(app_ctx)
+    async with _client(app) as client:
+        await _login(client)
+        resp = await client.post(
+            "/ui/agents/create",
+            data={
+                "agent_id": "ui-grant-agent",
+                "memory_mb": 512,
+                "vcpu_count": 1,
+                "namespaces": ["private"],
+                "namespace_permissions": ["read", "write"],
+            },
+        )
+        assert resp.status_code == 303
+        assert "msg=" in resp.headers["location"]
+        grants = await app_ctx.db.list_grants()
+        match = [
+            grant
+            for grant in grants
+            if grant.get("subject_agent") == "ui-grant-agent"
+            and grant.get("namespace") == "private"
+        ]
+        assert match
+        assert match[0]["target_agent"] == "ui-grant-agent"
+        assert "read" in match[0]["permissions"]
+        assert "write" in match[0]["permissions"]
+
+
+@pytest.mark.asyncio
 async def test_agent_create_full_manifest_fields(app_ctx):
     app = create_app(app_ctx)
     async with _client(app) as client:
@@ -332,7 +391,9 @@ async def test_audit_from_to_filters_roundtrip(app_ctx):
             params={"from": "2020-01-01T00:00:00", "to": "2099-01-01T00:00:00", "limit": "50"},
         )
         assert resp.status_code == 200
-        assert "2020-01-01T00:00:00" in resp.text
+        assert 'name="from"' in resp.text
+        assert 'type="datetime-local"' in resp.text
+        assert "2020-01-01T00:00" in resp.text
 
 
 @pytest.mark.asyncio
@@ -356,6 +417,7 @@ async def test_groups_panel_and_catalog_forms_render(app_ctx):
         assert users.status_code == 200
         assert 'id="groups"' in users.text
         assert "/users/groups/create" in users.text
+        assert "Create User" in users.text
 
         tools = await client.get("/ui/tools")
         assert tools.status_code == 200
@@ -369,6 +431,7 @@ async def test_groups_panel_and_catalog_forms_render(app_ctx):
         security = await client.get("/ui/security")
         assert security.status_code == 200
         assert "Save behavioral thresholds" in security.text
+        assert "Subject" in security.text
 
 
 @pytest.mark.asyncio

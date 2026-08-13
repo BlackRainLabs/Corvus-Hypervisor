@@ -1,0 +1,68 @@
+{% macro page_lead(text) -%}
+{% if text %}<p class="page-lead">{{ text }}</p>{% endif %}
+{%- endmacro %}
+
+{% macro section_hint(kind) -%}
+{% if kind == 'editable' %}
+<span class="hint">Editable</span>
+{% elif kind == 'dry-run' %}
+<span class="hint">Dry run</span>
+{% else %}
+<span class="hint">Live view</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro chips(items) -%}
+{% set values = items if items is iterable and items is not string else [] %}
+{% if values %}
+<span class="chips">{% for item in values %}<span class="chip">{{ item }}</span>{% endfor %}</span>
+{% else %}
+<span class="faint">—</span>
+{% endif %}
+{%- endmacro %}
+
+{% macro empty_state(text, href='', link_text='') -%}
+<div class="empty">
+  {{ text }}
+  {% if href and link_text %}<div class="empty-cta"><a href="{{ href }}">{{ link_text }}</a></div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro setting_row(s) -%}
+<div class="field setting-row">
+  <label for="setting_{{ s.key }}">
+    {{ s.label or s.key }}
+    <span class="setting-key">{{ s.key }}</span>
+    {% if s.restart_required %}<span class="badge warn">restart required</span>{% endif %}
+    {% if s.secret %}<span class="badge danger">secret</span>{% endif %}
+  </label>
+  {% if s.boolean %}
+  <select id="setting_{{ s.key }}" name="setting_{{ s.key }}">
+    <option value="true" {% if s.truthy %}selected{% endif %}>Yes</option>
+    <option value="false" {% if not s.truthy %}selected{% endif %}>No</option>
+  </select>
+  {% elif s.secret %}
+  <input id="setting_{{ s.key }}" name="setting_{{ s.key }}" value="" placeholder="******** — leave blank to keep" autocomplete="off">
+  {% else %}
+  <input id="setting_{{ s.key }}" name="setting_{{ s.key }}" value="{{ s.value }}">
+  {% endif %}
+  {% if s.help %}<div class="help">{{ s.help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro entity_select(name, options, selected=None, multiple=false, required=false, include_star=false, placeholder='') -%}
+{% set selected_list = selected if selected is iterable and selected is not string else ([selected] if selected else []) %}
+<select name="{{ name }}" id="{{ name }}" {% if multiple %}multiple{% endif %} {% if required %}required{% endif %}>
+  {% if not multiple %}
+  <option value="">{{ placeholder or 'Select…' }}</option>
+  {% endif %}
+  {% if include_star %}
+  <option value="*" {% if '*' in selected_list %}selected{% endif %}>* (all)</option>
+  {% endif %}
+  {% for opt in options %}
+    {% set value = opt if opt is string else (opt.get('id') or opt.get('name') or opt.get('provider_id') or opt.get('agent_id') or '') %}
+    {% set label = opt if opt is string else (opt.get('label') or value) %}
+    <option value="{{ value }}" {% if value in selected_list %}selected{% endif %}>{{ label }}</option>
+  {% endfor %}
+</select>
+{%- endmacro %}
