@@ -1,14 +1,12 @@
----
 **Document:** OVERVIEW.md
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-08-20
 **Related Documents:** hypervisor/ARCHITECTURE.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, agent-vm/ARCHITECTURE.md, CHANGES.md
 **Must Update on Change:** CHANGES.md (repository root)
 **AI Instruction:** When revising this document, review Core Principles & Invariants here, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.
 **API Caution:** Any changes must consider impact on the Management API surface (see hypervisor/MANAGEMENT-API.md). Maintain backward compatibility where possible and document breaking changes.
----
 
 # Corvus Architecture Overview
 

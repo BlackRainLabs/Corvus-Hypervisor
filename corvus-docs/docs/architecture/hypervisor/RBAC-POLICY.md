@@ -1,6 +1,6 @@
 **Document:** hypervisor/RBAC-POLICY.md
 **Status:** Implemented — RBAC Scope Aligned
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-08-20
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 **Related Documents:** OVERVIEW.md, hypervisor/MANAGEMENT-API.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, memory/ARCHITECTURE.md, CHANGES.md
@@ -68,7 +68,7 @@ sequenceDiagram
 | `provider`, `model` | `llm_request` payload |
 | `tool_execution_mode` | Agent manifest `engines.engine3.tool_execution_mode` (default `local`) |
 | `provider_tools_requested` | `llm_request` payload when hybrid provider tools are forwarded |
-| `behavioral_signals` | Behavioral monitor (Phase 5; placeholders in Section 9) |
+| `behavioral_signals` | Behavioral monitor (Phase 5; live signals in Section 10, incl. `tool_pattern_deviation`) |
 | `quota_remaining` | Quota Service counters |
 | `identity_channel`, `identity_alias`, `identity_verified`, `auth_method` | Identity Resolver from CLI/API/chat aliases |
 
@@ -152,7 +152,7 @@ The `has_valid_grant` condition delegates to the Grant Engine defined in [memory
 
 Grant records use the schema in memory/ARCHITECTURE.md Section 4. RBAC rules reference grants; they do not duplicate grant storage. Memory FrameworkMessage payloads use `target_agent_id`; `target_agent` is accepted only as a transitional payload/API boundary alias and as the persisted grant/rule object field.
 
-Current implementation includes a DB-backed Grant Engine for RBAC evaluation. It validates subject agent, target agent, namespace, permission, expiry, optional grant ID, and implicit owner access. This is control-plane grant evaluation only; Memory Service storage, memory record access, and memory operation execution remain Phase 4 work.
+Current implementation includes a DB-backed Grant Engine for RBAC evaluation. It validates subject agent, target agent, namespace, permission, expiry, optional grant ID, and implicit owner access. Control-plane grant evaluation is enforced before Memory Service storage, record access, and memory operation execution (Phase 4+ implemented).
 
 ## 7. Quota Enforcement Model
 

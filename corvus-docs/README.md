@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-02
+**Last Updated:** 2026-08-20
 **Related Documents:** docs/architecture/OVERVIEW.md, ../CHANGES.md, ../README.md
 **Must Update on Change:** ../CHANGES.md
 
@@ -30,14 +30,15 @@ Corvus Hypervisor is a security-first, centrally mediated multi-agent hypervisor
 - [Memory Architecture](docs/architecture/memory/ARCHITECTURE.md)
 - [Agent Workflow Rules](docs/architecture/agent-vm/AGENT-WORKFLOW.md)
 - [Planning & Roadmap](docs/planning/)
+- [Development Phases](docs/planning/PHASES.md)
 - [Operations Guide](docs/planning/OPERATIONS.md)
 - [Component Status](docs/planning/COMPONENT-STATUS.md)
 
 ## Implementation
 
-Phases 1–8 are implemented (architecture through operator console). See the [repository root README](../README.md) for setup, `make dev-up`, Docker deploy, tests, and Firecracker smoke.
+Phases 1–9 are implemented (architecture through operator console GUI configurability and chat). See the [repository root README](../README.md) for setup, `make dev-up`, Docker deploy, tests, and Firecracker smoke.
 
-**Current phase:** Phase 8 complete — operator console over the Management API. Phase 7.2+ (streaming + hybrid provider-hosted tools) complete.
+**Current phase:** Phase 9.6 complete — Operator Console catalogs/settings/providers editable; operator chat playground via `/ui/chat` and `/v1/agents/{id}/chat`. Phase 7.2+ (streaming + hybrid provider-hosted tools) complete.
 
 ## Changelog
 

@@ -1,13 +1,11 @@
----
 **Document:** agent-vm/ARCHITECTURE.md
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-08-20
 **Related Documents:** OVERVIEW.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, agent-vm/CORVUS-NODE.md, agent-vm/AGENT-WORKFLOW.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.
----
 
 # Agent VM Architecture
 
