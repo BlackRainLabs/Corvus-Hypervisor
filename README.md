@@ -51,7 +51,7 @@ Deep dive: [Architecture Overview](corvus-docs/docs/architecture/OVERVIEW.md)
 
 ## Status (v0.8.0)
 
-Phases **1–8** are complete: protocol and control plane, Firecracker/Node path, memory service, elevation and behavioral monitoring, ops tooling and Docker, LLM gateway (streaming + hybrid tools), and the operator console.
+Phases **1–9** are complete: protocol and control plane, Firecracker/Node path, memory service, elevation and behavioral monitoring, ops tooling and Docker, LLM gateway (streaming + hybrid tools), the operator console, and GUI full configurability with operator chat (Phase 9.6).
 
 This is an early public release, not 1.0. Still ahead: skill runtime beyond catalog placeholders, Firecracker workspace mounts, a broader tool surface, multi-host scaling, and richer observability. See [ROADMAP](corvus-docs/docs/planning/ROADMAP.md) and [COMPONENT-STATUS](corvus-docs/docs/planning/COMPONENT-STATUS.md).
 

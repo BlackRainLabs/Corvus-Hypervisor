@@ -2,7 +2,7 @@
 **Status:** MVP + Engine 4 Client + Semantic Search Implemented
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-08-20
 **Related Documents:** OVERVIEW.md, hypervisor/ARCHITECTURE.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, hypervisor/RBAC-POLICY.md, agent-vm/CORVUS-NODE.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.
@@ -221,17 +221,17 @@ payload:
 
 ## 7. Storage Backend Decision
 
-**Phase 2 default:**
+**Current storage (Phase 4+):**
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| Metadata & records | SQLite (WAL mode) | Simple, embedded, sufficient for Phase 2 scale; strong transactional guarantees |
-| Vector / semantic search | sqlite-vec extension | Keeps single-process deployment; avoids separate service for Phase 2 |
+| Metadata & records | SQLite (WAL mode) | Simple, embedded; strong transactional guarantees |
+| Vector / semantic search | sqlite-vec extension (Phase 4.3) | Keeps single-process deployment; avoids a separate vector service |
 | Grant store | SQLite (same DB, separate table) | Transactional consistency with memory records |
 
-**Phase 4+ migration path:** LanceDB or dedicated vector service if semantic query volume exceeds sqlite-vec performance targets (>10k records per agent or >100 QPS semantic queries).
+**Scale migration path:** LanceDB or dedicated vector service if semantic query volume exceeds sqlite-vec performance targets (>10k records per agent or >100 QPS semantic queries).
 
-**Encryption at rest (Phase 5):** Threat model assumes host compromise is out of scope for Phase 2; data at rest is filesystem-protected. Phase 5 adds per-agent encryption keys held by Corvus Server (not in VM). Placeholder hook: `record.metadata.encrypted: boolean` and `encryption_key_id` fields reserved in schema.
+**Encryption at rest (Phase 5.4, optional):** Threat model assumes host compromise is out of scope for the prototype default; data at rest is filesystem-protected unless enabled. Optional AES-GCM via `CORVUS_MEMORY_ENCRYPTION` with per-agent keys held by Corvus Server (not in VM). Schema fields `record.metadata.encrypted` and `encryption_key_id` are used when encryption is on.
 
 ## 8. Retention and Hygiene
 
@@ -292,9 +292,9 @@ class GrantEngine:
 
 | Open Question (prior) | Decision | Rationale |
 |-----------------------|----------|-----------|
-| Storage backend | SQLite + sqlite-vec for Phase 2 | Minimal ops burden; meets Phase 2 scale |
-| Encryption at rest | Deferred to Phase 5 with schema hooks | Host-trust model sufficient for prototype |
-| Graph vs vector | Hybrid: key + semantic (vector) only in Phase 2 | Graph relations deferred to Phase 4 |
+| Storage backend | SQLite + sqlite-vec (semantic search Phase 4.3) | Minimal ops burden; single-process deployment |
+| Encryption at rest | Optional AES-GCM via `CORVUS_MEMORY_ENCRYPTION` (Phase 5.4) | Off by default; keys held by Corvus Server |
+| Graph vs vector | Hybrid: key + semantic (vector); graph relations deferred | Key/list + semantic cover current workloads |
 | Hygiene | TTL + quotas + soft delete | Balances retention needs with storage bounds |
 
 **Black Rain Labs - Research & Development Division**

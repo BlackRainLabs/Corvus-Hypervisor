@@ -2,7 +2,7 @@
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-08-20
 **Related Documents:** OVERVIEW.md, hypervisor/RBAC-POLICY.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, memory/ARCHITECTURE.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 
@@ -55,7 +55,7 @@ Central bus over AF_VSOCK from Corvus Nodes. All messages use the FrameworkMessa
 Owns all per-agent memory stores outside microVMs. See [memory/ARCHITECTURE.md](../memory/ARCHITECTURE.md).
 
 **Components:**
-- **Memory Service** — CRUD on agent-scoped records (SQLite + sqlite-vec in Phase 2)
+- **Memory Service** — CRUD on agent-scoped records (SQLite; sqlite-vec semantic search from Phase 4.3)
 - **Grant Engine** — Evaluates cross-agent grant schema; creates/revokes grants via elevation or Management API
 - **Retention sweeper** — TTL enforcement and namespace quotas
 

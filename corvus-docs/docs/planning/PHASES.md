@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-08-20
 **Related Documents:** CHANGES.md
 **Must Update on Change:** CHANGES.md
 
@@ -55,7 +55,7 @@
 - Central Memory Service with SQLite-backed records
 - Router dispatch for `memory:query`, `memory:write`, and `memory:delete`
 - Namespace quota enforcement and memory operation audit events
-- Key/list query support; semantic search deferred to sqlite-vec slice
+- Key/list query support; semantic search via sqlite-vec delivered in Phase 4.3
 
 ## Phase 4.1: Engine 4 Client + E2E Validation — Implemented
 - `MemoryEngine.serve()` during COLLECT (own-namespace write + key query per turn)

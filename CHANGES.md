@@ -1,8 +1,28 @@
 # Architecture Changes Log
 
-**Last Updated:** 2026-08-17
+**Last Updated:** 2026-08-20
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
+
+## [2026-08-20] - Maintenance: docs sync (Phase 9 narrative)
+
+**Documents Modified:**
+- `README.md`, `corvus-docs/README.md`
+- `corvus-docs/docs/planning/ROADMAP.md`, `PHASES.md`, `OPERATIONS.md`, `COMPONENT-STATUS.md`
+- `corvus-docs/docs/architecture/OVERVIEW.md`
+- `corvus-docs/docs/architecture/hypervisor/MANAGEMENT-API.md`, `RBAC-POLICY.md`, `ARCHITECTURE.md`, `FRAMEWORK-MESSAGE-PROTOCOL.md`
+- `corvus-docs/docs/architecture/memory/ARCHITECTURE.md`
+- `corvus-docs/docs/architecture/agent-vm/ARCHITECTURE.md`, `AGENT-WORKFLOW.md`, `CORVUS-NODE.md`, `FIRECRACKER.md`
+
+**Key Changes:**
+- Docs-only maintenance: align status narrative with Phase 9.6 complete while keeping package version **0.8.0** unchanged.
+- Fixed broken MANAGEMENT-API → OPERATIONS relative link; corrected Phase-tense claims (memory enforcement, semantic search, behavioral signals, optional encryption).
+- Pruned ROADMAP near-term strikethrough history (completed work remains in PHASES/CHANGES); bumped stale Last Updated headers; removed `---` frontmatter wrappers on OVERVIEW and agent-vm ARCHITECTURE.
+- No runtime, API, or test behavior changes.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
 
 ## [2026-08-17] - Fix Operator Console chat Alpine init
 

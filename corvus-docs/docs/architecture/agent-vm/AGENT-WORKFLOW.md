@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-11
+**Last Updated:** 2026-08-20
 **Related Documents:** agent-vm/ARCHITECTURE.md, agent-vm/CORVUS-NODE.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, OVERVIEW.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md, ensure strict adherence to the 4-Engine Model and Corvus Node mediation rules. Update CHANGES.md.

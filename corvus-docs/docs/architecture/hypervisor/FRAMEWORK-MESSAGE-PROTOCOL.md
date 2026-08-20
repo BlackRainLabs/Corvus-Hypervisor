@@ -2,7 +2,7 @@
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-11
+**Last Updated:** 2026-08-20
 **Related Documents:** OVERVIEW.md, hypervisor/ARCHITECTURE.md, agent-vm/ARCHITECTURE.md, agent-vm/CORVUS-NODE.md, agent-vm/AGENT-WORKFLOW.md, memory/ARCHITECTURE.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.

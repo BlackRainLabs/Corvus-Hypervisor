@@ -2,7 +2,7 @@
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-08-20
 **Related Documents:** agent-vm/ARCHITECTURE.md, agent-vm/AGENT-WORKFLOW.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, OVERVIEW.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.

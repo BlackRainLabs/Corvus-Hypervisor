@@ -2,7 +2,7 @@
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-08-20
 **Related Documents:** OVERVIEW.md, hypervisor/RBAC-POLICY.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, memory/ARCHITECTURE.md, ../../planning/OPERATIONS.md, CHANGES.md
 **Must Update on Change:** CHANGES.md
 **AI Instruction:** When revising this document, review Core Principles & Invariants in OVERVIEW.md, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.
@@ -26,7 +26,8 @@ The Management API provides a clean, external interface for configuring and moni
 
 ## Authentication
 
-- API keys or OAuth2 with role scoping (admin, operator, viewer)
+- API keys with role scoping (admin, operator, viewer) — implemented
+- OAuth2 with role scoping — planned / not implemented
 - All API calls are audited
 
 ## Key Resource Endpoints
@@ -239,7 +240,7 @@ quota:
   default_ttl_seconds: integer | null
 ```
 
-Namespace quota endpoints are implemented as control-plane configuration before Phase 4 Memory Service. `GET` lists namespaces assigned in the agent's resolved manifest and overlays any per-agent quota override onto the server-owned catalog template. `PATCH` validates the agent, namespace catalog template, and namespace assignment before storing quota config; Memory Service enforcement starts in Phase 4.
+Namespace quota endpoints are control-plane configuration for the Memory Service. `GET` lists namespaces assigned in the agent's resolved manifest and overlays any per-agent quota override onto the server-owned catalog template. `PATCH` validates the agent, namespace catalog template, and namespace assignment before storing quota config; Memory Service enforcement of those quotas is implemented (Phase 4+).
 
 **Namespace response:**
 
@@ -257,7 +258,7 @@ namespace:
 
 ### Bus & Audit
 
-- `GET /v1/bus/traffic` — Live or historical bus inspection (not yet implemented)
+- `GET /v1/bus/traffic` — Live or historical bus inspection (planned / not implemented)
 - `GET /v1/audit/logs` — Query audit trail
 
 **GET /v1/audit/logs query params:** `correlation_id`, `origin_correlation_id`, `agent_id`, `from` (alias of `from_`), `to`, `limit`
@@ -355,7 +356,7 @@ error:
 
 - `GET /v1/metrics` — Prometheus text format (requires `X-API-Key`).
 - Gauges mirror `/v1/health` server and VM registry fields (sessions, sweeper liveness, pending replay depth, VM counts).
-- Operator guide: [OPERATIONS.md](../planning/OPERATIONS.md).
+- Operator guide: [OPERATIONS.md](../../planning/OPERATIONS.md).
 
 ## Future Considerations
 
