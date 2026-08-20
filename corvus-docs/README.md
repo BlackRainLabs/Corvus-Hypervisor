@@ -31,6 +31,7 @@ Corvus Hypervisor is a security-first, centrally mediated multi-agent hypervisor
 - [Agent Workflow Rules](docs/architecture/agent-vm/AGENT-WORKFLOW.md)
 - [Planning & Roadmap](docs/planning/)
 - [Development Phases](docs/planning/PHASES.md)
+- [Phase 10 — Skill Runtime plan](docs/planning/PHASE-10-SKILLS.md)
 - [Operations Guide](docs/planning/OPERATIONS.md)
 - [Component Status](docs/planning/COMPONENT-STATUS.md)
 
@@ -38,7 +39,7 @@ Corvus Hypervisor is a security-first, centrally mediated multi-agent hypervisor
 
 Phases 1–9 are implemented (architecture through operator console GUI configurability and chat). See the [repository root README](../README.md) for setup, `make dev-up`, Docker deploy, tests, and Firecracker smoke.
 
-**Current phase:** Phase 9.6 complete — Operator Console catalogs/settings/providers editable; operator chat playground via `/ui/chat` and `/v1/agents/{id}/chat`. Phase 7.2+ (streaming + hybrid provider-hosted tools) complete.
+**Current phase:** Phase 9.6 complete (baseline closed). Next: Phase 10 skill runtime — see [PHASE-10-SKILLS.md](docs/planning/PHASE-10-SKILLS.md) and [ROADMAP.md](docs/planning/ROADMAP.md).
 
 ## Changelog
 

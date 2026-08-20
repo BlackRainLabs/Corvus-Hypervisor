@@ -38,10 +38,12 @@
 | Corvus Node           | Phase 3 Stabilized| IPC socket, validation, handshake, routing, reconnect, `corvus-node` CLI |
 | Agent Runtime         | Phase 4.1 Implemented (turn-abort hardened) | Loop + 4 engines; Engine 4 memory client during COLLECT; Engine 3 server LLM client; terminal `ABORTED` phase + bounded engine waits + loop-authoritative `--once` teardown so stalled/failed turns never hang; `corvus-loop`, `corvus-engine`, `corvus-runtime` |
 | LLM Gateway           | Phase 7.2+ Done     | Streaming (local tool_calls + hybrid hosted tools) + local/hybrid tool execution policy, Engine 3→1 coordinator loop |
-| Tool Gateway          | Phase 7.3 Done      | RBAC + manifest approval; VM-local execution only |
+| Tool Gateway          | Phase 7.3 Done      | RBAC + manifest approval; VM-local execution only; builtins: echo/terminal/`file_read` |
+| Skill catalog         | Catalog-only        | `base-runtime` in catalog/manifest/GUI; **no** Engine 1 skill loader yet (Phase 10) |
+| Workspace mounts      | Catalog + manifest  | GUI/API assign mounts; launcher configures **rootfs only** until Phase 11 |
 | Engine 4 Memory Client | MVP Implemented | Own-namespace write/query via Node IPC; cross-agent + elevation covered in integration tests |
-| Memory Service        | MVP Implemented | SQLite records, router dispatch, quota enforcement, audit |
-| Firecracker Integration | Phase 4.2 Hardened| Launch/registry/stop smoke + Engine 4 memory turn DB validation in `vm-smoke.sh` |
+| Memory Service        | MVP Implemented | SQLite records, router dispatch, quota enforcement, audit; semantic search uses hash embeddings |
+| Firecracker Integration | Phase 4.2 Hardened| Launch/registry/stop smoke + Engine 4 memory turn DB validation in `vm-smoke.sh` (self-hosted / manual; not standard CI) |
 | Control-Plane Hardening | Phase 3.5 Implemented | Typed manifests, server-owned catalogs, per-VM config injection, VM health/lifecycle APIs |
 | RBAC Scope Alignment | Phase 3.6 Implemented | Schema-validated rules, channel aliases, live grants, quota/elevation foundations, audit filters |
 | Memory Contract Cleanup | Pre-Phase-4 Implemented | Canonical namespaces, `target_agent_id` payloads, namespace quota config, grant/elevation semantics |
@@ -77,5 +79,7 @@
 **Phase 9.5 Gate:** Operator Console pages use human labels, confirmations, catalog dropdowns, and hash-tab highlighting; JSON editors remain the day-2 control surface; login/docs describe username + PIN/password.
 
 **Phase 9.6 Gate:** Operator Chat at `/ui/chat` uses `POST /v1/agents/{id}/chat` through the LLM gateway (stub/dummy test providers); `make dev-up` starts dummy LLM; Engine 2 `CORVUS_CHAT_TEXT` for runtime turns.
+
+**Post–Phase 9:** Phases 1–9.6 closed. Next: Phase 10 skill runtime → Phase 11 FC workspace mounts → Phase 12 tools/ops. See PHASES.md baseline and ROADMAP.md.
 
 **Black Rain Labs - Research & Development Division**

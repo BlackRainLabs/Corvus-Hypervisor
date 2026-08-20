@@ -4,6 +4,22 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-20] - Planning: post–Phase 9 baseline + Phase 10–12 sequence
+
+**Documents Modified:**
+- `corvus-docs/docs/planning/PHASES.md`, `ROADMAP.md`, `COMPONENT-STATUS.md`, `PHASE-10-SKILLS.md` (new)
+- `corvus-docs/README.md`
+
+**Key Changes:**
+- Comb-back inventory recorded: skills catalog-only (no runtime loader); workspace mounts catalog/manifest only (launcher rootfs-only); tools limited to echo/terminal/`file_read`; FC smoke self-hosted only.
+- PHASES gains Post–Phase 9 baseline (intentional thin spots + do-not-reopen). ROADMAP Near Term ordered as Phase 10 → 11 → 12.
+- Draft Phase 10 skill-runtime implementation plan added (`PHASE-10-SKILLS.md`).
+- Docs only; no runtime or version change (still **0.8.0**).
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-20] - Maintenance: post-merge docs polish
 
 **Documents Modified:**
