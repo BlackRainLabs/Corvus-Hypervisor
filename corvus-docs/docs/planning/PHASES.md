@@ -3,7 +3,7 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 **Last Updated:** 2026-08-20
-**Related Documents:** CHANGES.md
+**Related Documents:** CHANGES.md, ROADMAP.md, PHASE-10-SKILLS.md
 **Must Update on Change:** CHANGES.md
 
 # Development Phases
@@ -188,5 +188,28 @@
 - `POST /v1/agents/{id}/chat` + `/ui/chat` playground through `LlmGatewayService` (manifest allowlists, audit, token quotas; text-only)
 - Seeded stub provider replies in-console; `make dev-up` starts dummy LLM on `:8765` for `dummy-http`
 - Engine 2 `CORVUS_CHAT_TEXT` for runtime turns
+
+## Post–Phase 9 baseline (2026-08-20)
+
+Phases **1–9.6 are closed**. Package version remains **0.8.0** until a Phase 10 runtime slice ships. Control plane, memory MVP, LLM gateway, Operator Console, and DB-backed catalogs/settings match code under `src/corvus/`.
+
+### Intentional thin spots (not defects)
+
+| Area | Shipped | Not yet |
+|------|---------|---------|
+| Skills | Catalog entry `base-runtime`, manifest allowlist, GUI CRUD | No Engine 1 / runtime skill loader (`src/corvus/runtime` has zero skill references) |
+| Workspaces | Catalog `default`, `WorkspaceMount` on manifest, GUI assign | `vm/spec.py` / `vm/launcher.py` configure **rootfs drive only** — no secondary FC mounts |
+| Tools | Registry: `echo`, `terminal`, `file_read` | Broader catalog tools |
+| Embeddings | sqlite-vec semantic API | Hash bag-of-words only (`memory/embeddings.py`) |
+| Webhooks | Elevation notify + optional HMAC | Broader audit-event webhook taxonomy |
+| Firecracker smoke | `tools/vm-smoke.sh` + workflow_dispatch self-hosted | Not on standard CI runners |
+
+### Do not reopen
+
+Protocol / star topology / Engine 3 bypass rules; Phase 8 SPA rewrite; Phase 9 settings/catalog model; casual rename of dual turn-timeout envs (`CORVUS_TURN_TIMEOUT_SECONDS` vs `CORVUS_TURN_TIMEOUT`); multi-host scaling as the next slice.
+
+### Forward sequence
+
+See [ROADMAP.md](ROADMAP.md) and [PHASE-10-SKILLS.md](PHASE-10-SKILLS.md): **Phase 10** skill runtime → **Phase 11** FC workspace mounts → **Phase 12** tools + ops depth.
 
 **Black Rain Labs - Research & Development Division**
