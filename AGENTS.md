@@ -12,7 +12,7 @@
    - `corvus-docs/docs/architecture/agent-vm/AGENT-WORKFLOW.md` (runtime agent behavior rules)
    - Root `README.md` (setup: server, node, runtime, tests, Firecracker smoke)
 
-2. **Implementation code** lives under `src/corvus/` (`protocol`, `server`, `policy`, `audit`, `management`, `node`, `runtime`, `vm`, `tools`).
+2. **Implementation code** lives under `src/corvus/` (`protocol`, `server`, `policy`, `audit`, `llm`, `memory`, `management`, `node`, `runtime`, `vm`, `tools`).
 
 3. **Changelog is Mandatory**:
    - Every change must be recorded in root `CHANGES.md` with proper format and date.

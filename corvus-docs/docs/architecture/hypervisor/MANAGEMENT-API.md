@@ -39,7 +39,7 @@ The Management API provides a clean, external interface for configuring and moni
 - `GET /v1/catalog/llm-providers` — List approved LLM providers, supported models, `api_base_url`, and hosted-tool flags (`hosted_tools_allowed`, `allowed_hosted_tools`; no credential secrets)
 - `GET /v1/catalog/workspaces` — List approved workspace mounts and memory namespace templates
 - `POST` / `PUT` / `DELETE` under `/v1/catalog/{tools,skills,workspaces,memory-namespaces,llm_providers}` — catalog CRUD (SQLite-backed; seeded from `DEFAULT_CATALOG` / YAML providers on first boot)
-- LLM provider writes reload `LlmProviderRegistry` in-process (no restart); `credential_ref` / `api_base_url` are never returned on GET
+- LLM provider writes reload `LlmProviderRegistry` in-process (no restart); GET responses include `api_base_url` but never return credential secrets / `credential_ref` values
 
 Agent manifests select catalog IDs. The Corvus Server resolves those selections before persistence and VM launch; VM-provided capability strings are never authoritative.
 

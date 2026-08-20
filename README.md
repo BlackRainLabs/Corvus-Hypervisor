@@ -17,27 +17,29 @@ Most agent stacks trust the runtime. Corvus does the opposite:
 
 ## Architecture
 
-```mermaid
-flowchart TB
-  subgraph host [Host]
-    Server[Corvus Server]
-    API[Management API / Operator Console]
-    Mem[Memory Service]
-    Server --- API
-    Server --- Mem
-  end
-  subgraph vm [Agent MicroVM]
-    Node[Corvus Node]
-    E1[Engine 1 Tools]
-    E2[Engine 2 Channels]
-    E3[Engine 3 LLM]
-    E4[Engine 4 Memory]
-    Node --- E1
-    Node --- E2
-    Node --- E3
-    Node --- E4
-  end
-  Node <-->|"AF_VSOCK or TCP"| Server
+```
+                        Operator
+               (Console /ui · Management API)
+                              |
+                              v
+  +------------------------- Host --------------------------+
+  |   +-------------------+         +-------------------+   |
+  |   |  Corvus Server    |-------> |  Memory Service   |   |
+  |   |  RBAC · Audit     |         +-------------------+   |
+  |   |  LLM Gateway      |                                 |
+  |   +---------^---------+                                 |
+  +-------------|-------------------------------------------+
+                |
+           AF_VSOCK / TCP
+                |
+  +-------------|------------- Agent MicroVM ---------------+
+  |   +---------v---------+                                 |
+  |   |   Corvus Node     |   sole VM exit / entry          |
+  |   +--+----+----+----+-+                                 |
+  |      |    |    |    |                                   |
+  |     E1   E2   E3   E4                                   |
+  |   Tools Chan LLM  Mem                                   |
+  +---------------------------------------------------------+
 ```
 
 | Layer | Role |
@@ -45,7 +47,7 @@ flowchart TB
 | **Corvus Server** | Routing, RBAC, audit, elevation, LLM gateway, memory mediation |
 | **Corvus Node** | In-VM gateway: IPC, validation, reconnect |
 | **4 engines** | Tools, channels, LLM client, memory client — strict separation |
-| **Management API + `/ui`** | Operators manage agents, policy, security, and health |
+| **Management API + `/ui`** | Operators manage agents, policy, security, health, and chat |
 
 Deep dive: [Architecture Overview](corvus-docs/docs/architecture/OVERVIEW.md)
 
@@ -83,10 +85,12 @@ make run-turn      # one agent turn (all engines)
 make dev-down
 ```
 
-Management API: `http://127.0.0.1:8080` with header `X-API-Key: dev-api-key`  
-Operator Console: `http://127.0.0.1:8080/ui` (sign in `admin-user` / `0000`)  
-Chat: `http://127.0.0.1:8080/ui/chat` — seeded `test-agent-01` uses the in-process stub LLM  
-OpenAPI docs: `http://127.0.0.1:8080/docs` (while the server is running)
+| Surface | URL / note |
+|---------|------------|
+| Management API | `http://127.0.0.1:8080` · header `X-API-Key: dev-api-key` |
+| Operator Console | `http://127.0.0.1:8080/ui` · sign in `admin-user` / `0000` |
+| Chat | `http://127.0.0.1:8080/ui/chat` · seeded `test-agent-01` uses stub LLM |
+| OpenAPI | `http://127.0.0.1:8080/docs` (while server is running) |
 
 ```bash
 make openapi       # export openapi.json offline
@@ -117,6 +121,7 @@ Details: [FIRECRACKER.md](corvus-docs/docs/architecture/agent-vm/FIRECRACKER.md)
 | Doc | Purpose |
 |-----|---------|
 | [OVERVIEW](corvus-docs/docs/architecture/OVERVIEW.md) | Core principles and invariants |
+| [MANAGEMENT-API](corvus-docs/docs/architecture/hypervisor/MANAGEMENT-API.md) | HTTP API and Operator Console contract |
 | [OPERATIONS](corvus-docs/docs/planning/OPERATIONS.md) | Dev stack, Docker, metrics, fixtures |
 | [COMPONENT-STATUS](corvus-docs/docs/planning/COMPONENT-STATUS.md) | What is implemented |
 | [FrameworkMessage Protocol](corvus-docs/docs/architecture/hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md) | Wire protocol |
