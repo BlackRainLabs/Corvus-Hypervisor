@@ -156,6 +156,9 @@ async def test_chat_page_and_stub_reply(app_ctx):
         assert page.status_code == 200
         assert 'value="test-agent-01"' in page.text
         assert "Ask the test LLM" in page.text
+        assert 'id="corvus-chat-config"' in page.text
+        assert 'x-data="corvusChat"' in page.text
+        assert 'x-data="corvusChat({' not in page.text
         sent = await client.post(
             "/ui/chat/send",
             json={

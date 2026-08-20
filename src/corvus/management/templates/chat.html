@@ -9,9 +9,8 @@
 {% if not chat_agents %}
 {{ empty_state('No agents registered', href=prefix + '/agents#create-agent', link_text='Create an agent') }}
 {% else %}
-<div class="chat-shell"
-     x-data="corvusChat({{ {'agents': chat_agents, 'prefix': prefix} | tojson }})"
-     x-init="init()">
+<script type="application/json" id="corvus-chat-config">{{ {'agents': chat_agents, 'prefix': prefix} | tojson }}</script>
+<div class="chat-shell" x-data="corvusChat">
   <aside class="card chat-sidebar">
     <h2>Session {{ section_hint('editable') }}</h2>
     <div class="field">
@@ -42,7 +41,7 @@
         </template>
       </div>
     </div>
-    <p class="help">Seeded <span class="mono">test-agent-01</span> uses the in-process <span class="mono">stub</span> provider. <span class="mono">dummy-http</span> / <span class="mono">dummy-v1</span> works when those ids are on the manifest; <code>make dev-up</code> starts that API on port 8765.</p>
+    <p class="help">Seeded <span class="mono">test-agent-01</span> uses the in-process <span class="mono">stub</span> provider. A launched Firecracker VM is not required. <span class="mono">dummy-http</span> / <span class="mono">dummy-v1</span> works when those ids are on the manifest; <code>make dev-up</code> starts that API on port 8765.</p>
     <div class="btn-row">
       <button class="btn sm" type="button" @click="clear()">Clear transcript</button>
     </div>
@@ -77,110 +76,114 @@
   </section>
 </div>
 <script>
-function corvusChat(cfg) {
-  const agents = cfg.agents || [];
-  return {
-    agents,
-    prefix: cfg.prefix || "/ui",
-    agentId: agents[0] ? agents[0].id : "",
-    provider: "",
-    model: "",
-    input: "",
-    sending: false,
-    error: "",
-    messages: [],
-    init() {
-      this.syncProviderModel();
-      this.loadHistory();
-      this.$nextTick(() => this.scroll());
-    },
-    currentAgent() {
-      return this.agents.find((agent) => agent.id === this.agentId) || {
-        id: this.agentId,
-        providers: ["stub"],
-        models: ["stub-v1"],
-        status: "stopped",
-      };
-    },
-    storageKey() {
-      return "corvus-chat:" + this.agentId;
-    },
-    syncProviderModel() {
-      const agent = this.currentAgent();
-      if (!agent.providers.includes(this.provider)) {
-        this.provider = agent.providers[0] || "stub";
-      }
-      if (!agent.models.includes(this.model)) {
-        this.model = agent.models[0] || "stub-v1";
-      }
-    },
-    loadHistory() {
-      try {
-        this.messages = JSON.parse(localStorage.getItem(this.storageKey()) || "[]");
-      } catch (_err) {
-        this.messages = [];
-      }
-    },
-    saveHistory() {
-      localStorage.setItem(this.storageKey(), JSON.stringify(this.messages));
-    },
-    onAgentChange() {
-      this.error = "";
-      this.syncProviderModel();
-      this.loadHistory();
-      this.$nextTick(() => this.scroll());
-    },
-    clear() {
-      this.messages = [];
-      this.error = "";
-      this.saveHistory();
-    },
-    scroll() {
-      const el = this.$refs.transcript;
-      if (el) el.scrollTop = el.scrollHeight;
-    },
-    async send() {
-      const text = (this.input || "").trim();
-      if (!text || this.sending || !this.agentId) return;
-      this.error = "";
-      this.input = "";
-      this.messages.push({ role: "user", content: text });
-      this.saveHistory();
-      this.sending = true;
-      this.$nextTick(() => this.scroll());
-      try {
-        const resp = await fetch(this.prefix + "/chat/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            agent_id: this.agentId,
-            provider: this.provider,
-            model: this.model,
-            messages: this.messages.filter((msg) => !msg.error),
-          }),
-        });
-        const data = await resp.json();
-        if (!resp.ok || data.success === false) {
-          const err =
-            data.error ||
-            (data.detail && (data.detail.message || data.detail.code)) ||
-            "Chat failed";
-          this.error = err;
-          this.messages.push({ role: "assistant", content: err, error: true });
-        } else {
-          this.messages.push({ role: "assistant", content: data.reply || "" });
-        }
-        this.saveHistory();
-      } catch (err) {
-        this.error = String(err);
-      } finally {
-        this.sending = false;
+document.addEventListener("alpine:init", () => {
+  Alpine.data("corvusChat", () => {
+    const raw = document.getElementById("corvus-chat-config");
+    const cfg = JSON.parse(raw ? raw.textContent : "{}");
+    const agents = cfg.agents || [];
+    return {
+      agents,
+      prefix: cfg.prefix || "/ui",
+      agentId: agents[0] ? agents[0].id : "",
+      provider: "",
+      model: "",
+      input: "",
+      sending: false,
+      error: "",
+      messages: [],
+      init() {
+        this.syncProviderModel();
+        this.loadHistory();
         this.$nextTick(() => this.scroll());
-      }
-    },
-  };
-}
+      },
+      currentAgent() {
+        return this.agents.find((agent) => agent.id === this.agentId) || {
+          id: this.agentId,
+          providers: ["stub"],
+          models: ["stub-v1"],
+          status: "stopped",
+        };
+      },
+      storageKey() {
+        return "corvus-chat:" + this.agentId;
+      },
+      syncProviderModel() {
+        const agent = this.currentAgent();
+        if (!agent.providers.includes(this.provider)) {
+          this.provider = agent.providers[0] || "stub";
+        }
+        if (!agent.models.includes(this.model)) {
+          this.model = agent.models[0] || "stub-v1";
+        }
+      },
+      loadHistory() {
+        try {
+          this.messages = JSON.parse(localStorage.getItem(this.storageKey()) || "[]");
+        } catch (_err) {
+          this.messages = [];
+        }
+      },
+      saveHistory() {
+        localStorage.setItem(this.storageKey(), JSON.stringify(this.messages));
+      },
+      onAgentChange() {
+        this.error = "";
+        this.syncProviderModel();
+        this.loadHistory();
+        this.$nextTick(() => this.scroll());
+      },
+      clear() {
+        this.messages = [];
+        this.error = "";
+        this.saveHistory();
+      },
+      scroll() {
+        const el = this.$refs.transcript;
+        if (el) el.scrollTop = el.scrollHeight;
+      },
+      async send() {
+        const text = (this.input || "").trim();
+        if (!text || this.sending || !this.agentId) return;
+        this.error = "";
+        this.input = "";
+        this.messages.push({ role: "user", content: text });
+        this.saveHistory();
+        this.sending = true;
+        this.$nextTick(() => this.scroll());
+        try {
+          const resp = await fetch(this.prefix + "/chat/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              agent_id: this.agentId,
+              provider: this.provider,
+              model: this.model,
+              messages: this.messages.filter((msg) => !msg.error),
+            }),
+          });
+          const data = await resp.json();
+          if (!resp.ok || data.success === false) {
+            const err =
+              data.error ||
+              (data.detail && (data.detail.message || data.detail.code)) ||
+              "Chat failed";
+            this.error = err;
+            this.messages.push({ role: "assistant", content: err, error: true });
+          } else {
+            this.messages.push({ role: "assistant", content: data.reply || "" });
+          }
+          this.saveHistory();
+        } catch (err) {
+          this.error = String(err);
+        } finally {
+          this.sending = false;
+          this.$nextTick(() => this.scroll());
+        }
+      },
+    };
+  });
+});
 </script>
 {% endif %}
 {% endblock %}

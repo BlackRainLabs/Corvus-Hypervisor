@@ -1,8 +1,21 @@
 # Architecture Changes Log
 
-**Last Updated:** 2026-08-13
+**Last Updated:** 2026-08-17
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
+
+## [2026-08-17] - Fix Operator Console chat Alpine init
+
+**Documents Modified:**
+- `src/corvus/management/templates/chat.html`
+- `tests/test_ui.py`
+
+**Key Changes:**
+- Chat config is no longer JSON inside a double-quoted `x-data` attribute (that truncated the Alpine expression so Send never ran). Config now lives in a JSON script tag; Alpine.data wires the component.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
 
 ## [2026-08-13] - Operator chat + runnable test LLM
 
