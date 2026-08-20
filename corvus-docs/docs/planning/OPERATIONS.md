@@ -156,7 +156,7 @@ Add cases when introducing new default rules or behavioral gates.
 
 Provider endpoints and API keys are **server-side only**. Agents select allowed provider ids and models in the launch manifest — never URLs or secrets.
 
-Registry file (default `config/llm_providers.yaml`):
+Registry file (default `config/llm_providers.yaml`). Shipped seed providers are `openai`, `stub`, and `dummy-http`. The `local`/Ollama block below is an **illustration** of a custom OpenAI-compatible endpoint — it is not in the default file:
 
 ```yaml
 providers:
@@ -198,7 +198,14 @@ Runtime env for local tool loop: `CORVUS_LLM_LOCAL_TOOLS=echo,terminal,file_read
 
 Runtime env for LLM streaming: `CORVUS_LLM_STREAM=1` (Engine 3 sends `stream: true`). Compatible with local tools and hybrid provider-hosted tools.
 
-Turn timeout: `CORVUS_TURN_TIMEOUT_SECONDS` (default **120**) bounds a single agent turn. The Agent Loop waits this long for a terminal phase (`DONE`/`ABORTED`) and Engine 1's COLLECT loop uses the same deadline as a backstop. On expiry the turn is aborted (terminal `ABORTED` phase) and the `--once` runtime exits cleanly — no stalled turn can hang the process, which keeps concurrent multi-agent runs reliable.
+Turn timeouts (two separate env vars — do not rename/unify casually):
+
+| Variable | Default | Scope |
+|----------|---------|--------|
+| `CORVUS_TURN_TIMEOUT_SECONDS` | **120** | Agent runtime: Agent Loop wait for terminal phase (`DONE`/`ABORTED`) and Engine 1 COLLECT backstop. On expiry the turn aborts and `--once` exits cleanly. |
+| `CORVUS_TURN_TIMEOUT` | **300** | Corvus Server correlation / control-plane turn budget (seconds). Independent of the runtime knob above. |
+
+On runtime expiry the turn is moved to terminal `ABORTED` so stalled turns cannot hang the process, which keeps concurrent multi-agent runs reliable.
 
 Correlation depth: multi-hop tool turns increment chain depth; default `CORVUS_MAX_CHAIN_DEPTH` is **16**.
 

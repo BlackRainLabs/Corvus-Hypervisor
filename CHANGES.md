@@ -4,6 +4,25 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-20] - Maintenance: post-merge docs polish
+
+**Documents Modified:**
+- `README.md`, `AGENTS.md`, `tools/corvus.env.example`
+- `corvus-docs/docs/architecture/hypervisor/MANAGEMENT-API.md`, `RBAC-POLICY.md`
+- `corvus-docs/docs/architecture/agent-vm/FIRECRACKER.md`, `AGENT-WORKFLOW.md`
+- `corvus-docs/docs/planning/ROADMAP.md`, `COMPONENT-STATUS.md`, `OPERATIONS.md`
+
+**Key Changes:**
+- Docs-only polish after Phase 9 merge: fixed MANAGEMENT-API contradiction (`api_base_url` is returned on GET; credentials/`credential_ref` stay redacted).
+- Deduped ROADMAP near/medium bullets; updated “future GUI” and UI test count (24); marked RBAC condition plugins as planned/not implemented.
+- Documented dual turn-timeout env vars (`CORVUS_TURN_TIMEOUT_SECONDS` vs `CORVUS_TURN_TIMEOUT`); labeled Ollama sample as illustration; extended AGENTS package list with `llm`/`memory`.
+- Replaced README Mermaid architecture diagram with a plain ASCII layout that renders cleanly on GitHub; clarified quickstart URL table and added MANAGEMENT-API to the docs index.
+- No runtime, API, or version changes (still **0.8.0**).
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-20] - Maintenance: docs sync (Phase 9 narrative)
 
 **Documents Modified:**

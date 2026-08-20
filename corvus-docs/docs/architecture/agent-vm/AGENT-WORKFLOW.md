@@ -51,7 +51,7 @@ The Agent Loop acts as a lightweight state machine with the following mandatory 
 **Turn-abort robustness:**
 - Any engine that fails or times out (LLM failure, tool-batch timeout, max tool iterations, dispatch/collect/respond timeouts, or a rejected `user_query`/`agent_response`) moves the turn to the terminal `ABORTED` phase via the coordinator's idempotent `abort(reason)`.
 - Engines waiting on a phase (e.g. Engine 1's COLLECT loop, Engine 2's wait for RESPOND) treat any terminal phase as a stop signal and exit promptly instead of waiting out their individual timeouts.
-- The Agent Loop awaits `DONE`-or-`ABORTED` bounded by `CORVUS_TURN_TIMEOUT_SECONDS` (default 120s); on timeout it aborts the turn itself.
+- The Agent Loop awaits `DONE`-or-`ABORTED` bounded by `CORVUS_TURN_TIMEOUT_SECONDS` (default 120s); on timeout it aborts the turn itself. (Server-side correlation uses a separate knob, `CORVUS_TURN_TIMEOUT`, default 300s — see OPERATIONS.md.)
 - Engine 1's COLLECT loop is bounded by the same turn deadline and honors a stop request, so a stalled turn can never spin an engine forever.
 - Under `--once`, the supervisor is loop-authoritative: once the loop resolves the turn it stops the engines and, after a short grace window for in-flight IPC, cancels any stragglers — a stalled engine cannot hang the runtime. This is what keeps concurrent multi-agent runs reliable.
 

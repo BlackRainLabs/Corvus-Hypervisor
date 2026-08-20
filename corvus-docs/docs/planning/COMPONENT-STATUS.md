@@ -46,7 +46,7 @@
 | RBAC Scope Alignment | Phase 3.6 Implemented | Schema-validated rules, channel aliases, live grants, quota/elevation foundations, audit filters |
 | Memory Contract Cleanup | Pre-Phase-4 Implemented | Canonical namespaces, `target_agent_id` payloads, namespace quota config, grant/elevation semantics |
 
-**Phase 3.5 (Control-Plane Hardening): Implemented.** The server now owns capability catalogs and resolves typed launch manifests before persistence or VM launch. VM records expose lifecycle, liveness, launch logs, errors, per-VM package paths, and session cleanup state through API surfaces suitable for future GUI clients.
+**Phase 3.5 (Control-Plane Hardening): Implemented.** The server now owns capability catalogs and resolves typed launch manifests before persistence or VM launch. VM records expose lifecycle, liveness, launch logs, errors, per-VM package paths, and session cleanup state through Management API health surfaces and the Operator Console.
 
 **Phase 4 MVP Gate:** Memory Service MVP is implemented with SQLite record storage, router dispatch, namespace quota enforcement, and memory audit events.
 
@@ -70,7 +70,7 @@
 
 **Phase 7.2+ Gate:** Streaming coexists with hybrid provider-hosted tools; gateway forwards registry-approved hosted tools on stream requests; stub/OpenAI adapters and `finalize_stream` record `provider_tools_used` / `trust_boundary` with hybrid audit parity.
 
-**Phase 8 Gate:** Operator console at `/ui` renders every sidebar category; login gates all pages via signed cookie; API-mutable resources are editable through the console (reusing `/v1` validation + audit); System page redacts secrets; 17 UI tests plus full-suite green.
+**Phase 8 Gate:** Operator console at `/ui` renders every sidebar category; login gates all pages via signed cookie; API-mutable resources are editable through the console (reusing `/v1` validation + audit); System page redacts secrets; 24 UI tests plus full-suite green.
 
 **Phase 9 Gate:** DB-backed catalogs + runtime settings + LLM provider registry editable via GUI/`/v1`; env/YAML bootstrap + break-glass only; bind host/port/transport marked restart_required (no UI auto-restart); health/metrics/audit bodies/resolved manifest remain informational.
 

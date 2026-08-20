@@ -105,7 +105,7 @@ rules:
 
 **Modularity features:**
 - Rules added/removed/prioritized without code changes
-- Custom conditions registered as plugins (Phase 4+)
+- Custom conditions registered as plugins — planned / not implemented (no plugin registry in-tree)
 - Scoped to agents, users, or groups
 
 Implemented rule validation rejects unsupported fields before rules are stored or activated. Rules can match identity channel and authentication method, so CLI/API PIN verification and chat aliases can be represented in the same PDP flow as role, group, agent, engine, and message-type constraints.

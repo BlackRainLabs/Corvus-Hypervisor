@@ -103,6 +103,6 @@ Configuration: `/etc/corvus/env`, manifest: `/etc/corvus/manifest.json`
 
 At VM launch, Corvus also writes a per-VM package under `CORVUS_VM_STATE_DIR/launch-packages/<vm_instance_id>/` with the canonical manifest and generated env file. The launcher injects `CORVUS_AGENT_ID`, `CORVUS_VM_ID`, `CORVUS_MANIFEST_HASH`, VSOCK settings, and registered engines through Firecracker boot arguments so the guest identity matches the server-side agent definition even when the base rootfs is shared.
 
-The VM registry retains lifecycle records after stop/failure and surfaces PID liveness, launch logs, last error, stop reason, and whether the stop path was graceful. These fields feed Management API health and future GUI status views.
+The VM registry retains lifecycle records after stop/failure and surfaces PID liveness, launch logs, last error, stop reason, and whether the stop path was graceful. These fields feed Management API health endpoints and Operator Console status views.
 
 **Black Rain Labs - Research & Development Division**

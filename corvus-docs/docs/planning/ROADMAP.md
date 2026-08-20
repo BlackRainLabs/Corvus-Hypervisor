@@ -9,8 +9,7 @@
 # Corvus Roadmap
 
 ## Near Term (Next 1-2 Months)
-- Skill runtime beyond catalog placeholders; Firecracker workspace drive mounts
-- Additional catalog tools beyond echo/terminal/`file_read`
+- See Medium Term for the next product slice (skill runtime, workspace mounts, catalog tools)
 
 ## Medium Term (3-6 Months)
 - Skill runtime beyond catalog placeholders; Firecracker workspace drive mounts
