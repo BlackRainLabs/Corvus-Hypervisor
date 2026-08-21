@@ -31,6 +31,17 @@ Before any real deployment:
 3. Prefer Firecracker / vsock over TCP
 4. Treat agent workloads as untrusted; do not weaken star-topology or RBAC invariants
 5. Keep LLM provider credentials on the server only (never inside guest VMs)
+6. Treat **skills** like untrusted dependencies: install only from allowlisted sources with pin + sha256; review `SKILL.md` and scripts before approving; never enable `allow_scripts` without review; never fetch skills from inside the guest mid-turn (see `PHASE-10-SKILLS.md`)
+
+## Skill library threat model (Phase 10)
+
+| Threat | Mitigation |
+|--------|------------|
+| Malicious open-source skill (prompt injection / exfil) | Admin-only install; dry-run preview; deny-by-default source allowlist; pin + content hash |
+| Path traversal / zip slip in package | Validated extract under content-addressed store; reject `..`, absolute paths, symlinks |
+| Unreviewed script execution | `allow_scripts` defaults false; scripts run only via Engine 1 after RBAC |
+| Supply-chain drift | Refuse floating `latest`; require sha256 match |
+| Guest escape via skill network | Install fetch is server-side only; guest has no skill registry access |
 
 ## Scope
 

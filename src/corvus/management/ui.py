@@ -597,6 +597,40 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             return redirect(dest, err=_error_text(data, "Catalog save failed"))
         return redirect(dest, msg="Catalog entry saved")
 
+    @router.post("/tools/skills/install")
+    async def skills_install_form(
+        request: Request,
+        source: str = Form(...),
+        pin: str = Form(...),
+        sha256: str = Form(...),
+        dry_run: str = Form(default=""),
+        allow_scripts: str = Form(default=""),
+    ) -> RedirectResponse:
+        require_session(request)
+        body = {
+            "source": source.strip(),
+            "pin": pin.strip(),
+            "sha256": sha256.strip(),
+            "dry_run": dry_run in {"1", "true", "on"},
+            "allow_scripts": allow_scripts in {"1", "true", "on"},
+        }
+        ok, data, _ = await api.call("POST", "/v1/catalog/skills/install", json=body)
+        if not ok:
+            return redirect("/tools#skills", err=_error_text(data, "Skill install failed"))
+        if body["dry_run"]:
+            files = ", ".join(data.get("files") or [])
+            return redirect(
+                "/tools#skills",
+                msg=(
+                    f"Dry run OK: {data.get('name')}@{data.get('version')} "
+                    f"hash={data.get('content_hash')} files=[{files}]"
+                ),
+            )
+        return redirect(
+            "/tools#skills",
+            msg=f"Installed skill {data.get('name')} ({data.get('content_hash')})",
+        )
+
     @router.post("/tools/catalog/{kind}/{entry_id}/delete")
     async def catalog_delete_form(
         request: Request, kind: str, entry_id: str

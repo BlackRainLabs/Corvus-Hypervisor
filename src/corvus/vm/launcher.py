@@ -64,6 +64,11 @@ class VMLauncher:
 
         env = self._build_launch_env(agent_id, vm_id, mh, resolved_manifest)
         self._write_launch_package(launch_package_dir, resolved_manifest, env)
+        # Bake skills after env baseline so CORVUS_SKILLS_DIR is written into package
+        skill_env = self._bake_skills(launch_package_dir, resolved_manifest)
+        if skill_env:
+            env.update(skill_env)
+            self._write_launch_package(launch_package_dir, resolved_manifest, env)
 
         limits = resolved_manifest.get("resource_limits", {})
         spec = VmSpec(
@@ -231,6 +236,35 @@ class VMLauncher:
             "CORVUS_COORDINATOR_PATH": "/run/corvus/coordinator.json",
             "CORVUS_REGISTERED_ENGINES": ",".join(engines),
         }
+
+    def _bake_skills(
+        self, launch_package_dir: Path, resolved_manifest: dict[str, Any]
+    ) -> dict[str, str]:
+        skill_names = list(resolved_manifest.get("skills") or [])
+        if not skill_names:
+            return {}
+        from corvus.server.catalog import DEFAULT_CATALOG
+        from corvus.skills.bake import bake_skills_into_launch_package
+
+        catalog = getattr(self, "catalog", None) or DEFAULT_CATALOG
+        try:
+            return bake_skills_into_launch_package(
+                launch_package_dir,
+                skill_names=skill_names,
+                catalog=catalog,
+            )
+        except FileNotFoundError:
+            # Builtin-only bake still works via SkillStore.ensure_builtin
+            from corvus.skills.store import SkillStore
+
+            store = SkillStore()
+            store.ensure_builtin_base_runtime()
+            return bake_skills_into_launch_package(
+                launch_package_dir,
+                skill_names=skill_names,
+                catalog=catalog,
+                store=store,
+            )
 
     @staticmethod
     def _write_launch_package(

@@ -150,6 +150,7 @@ class AgentChatRequest(BaseModel):
 def create_app(ctx: AppContext) -> FastAPI:
     app = FastAPI(title="Corvus Management API", version="1")
     vm_launcher = VMLauncher()
+    vm_launcher.catalog = ctx.catalog_store.catalog
     rate_limiter = SlidingWindowRateLimiter(
         limit=ctx.config.api_rate_limit_per_minute,
         window_seconds=60.0,
@@ -315,11 +316,88 @@ def create_app(ctx: AppContext) -> FastAPI:
 
     def _after_catalog_write(kind: str) -> None:
         ctx.memory.bind_catalog(ctx.catalog_store.catalog)
+        vm_launcher.catalog = ctx.catalog_store.catalog
         if kind == "llm_providers":
             rebuilt = ctx.catalog_store.rebuild_llm_registry()
             if rebuilt is not None:
                 ctx.llm_registry = rebuilt
                 ctx.llm.registry = rebuilt
+
+    @app.post("/v1/catalog/skills/install")
+    async def catalog_skills_install(
+        body: dict[str, Any], _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        """Admin install of Agent Skills package from allowlisted source (pin + sha256)."""
+        from corvus.skills.install import InstallRequest, install_skill
+        from corvus.skills.store import SkillStore
+
+        source = str(body.get("source") or "").strip()
+        pin = str(body.get("pin") or "").strip()
+        sha256 = str(body.get("sha256") or "").strip()
+        dry_run = bool(body.get("dry_run", False))
+        allow_scripts = bool(body.get("allow_scripts", False))
+        version = body.get("version")
+        if not source or not pin or not sha256:
+            raise HTTPException(
+                status_code=422,
+                detail=_error(
+                    "SKILL_INSTALL_INVALID",
+                    "source, pin, and sha256 are required",
+                ),
+            )
+        try:
+            result = install_skill(
+                InstallRequest(
+                    source=source,
+                    pin=pin,
+                    sha256=sha256,
+                    allow_scripts=allow_scripts,
+                    dry_run=dry_run,
+                    version=str(version) if version else None,
+                ),
+                store=SkillStore(),
+            )
+        except ValueError as exc:
+            await ctx.audit.log_api_mutation(
+                endpoint="POST /v1/catalog/skills/install",
+                details={
+                    "event": "skill_deny",
+                    "source": source,
+                    "pin": pin,
+                    "reason": str(exc),
+                },
+            )
+            raise HTTPException(
+                status_code=400, detail=_error("SKILL_INSTALL_DENIED", str(exc))
+            ) from exc
+
+        if not dry_run and result.entry:
+            await ctx.catalog_store.upsert("skills", result.entry)
+            _after_catalog_write("skills")
+            await ctx.audit.log_api_mutation(
+                endpoint="POST /v1/catalog/skills/install",
+                details={
+                    "event": "skill_install",
+                    "name": result.name,
+                    "source": source,
+                    "pin": pin,
+                    "content_hash": result.content_hash,
+                    "allow_scripts": allow_scripts,
+                },
+            )
+        return {
+            "dry_run": result.dry_run,
+            "name": result.name,
+            "version": result.version,
+            "description": result.description,
+            "content_hash": result.content_hash,
+            "files": result.files,
+            "allow_scripts": result.allow_scripts,
+            "source_uri": result.source_uri,
+            "source_pin": result.source_pin,
+            "store_path": result.store_path,
+            "entry": result.entry or None,
+        }
 
     @app.get("/v1/catalog/tools")
     async def catalog_tools(_: None = Depends(require_api_key)) -> dict[str, Any]:

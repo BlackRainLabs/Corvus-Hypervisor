@@ -4,6 +4,27 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-20] - Phase 10: secure skill runtime + open library
+
+**Documents Modified:**
+- `src/corvus/skills/` (new: parse, validate, fetch, store, install, bake, runner)
+- `src/corvus/server/catalog.py`, `manifest.py`
+- `src/corvus/tools/registry.py`, `service.py`
+- `src/corvus/vm/launcher.py`
+- `src/corvus/management/api.py`, `ui.py`, `templates/tools.html`
+- `tests/test_skills.py` (new)
+- `PHASE-10-SKILLS.md`, `ROADMAP.md`, `OPERATIONS.md`, `SECURITY.md`, `AGENTS.md`, `tools/corvus.env.example`
+
+**Key Changes:**
+- **10a:** Catalog provenance fields; Engine 1 tools `skill_read` / `skill_run`; gateway checks manifest `skills`; builtin `base-runtime` package.
+- **10b:** `POST /v1/catalog/skills/install` with allowlist, pin, sha256, dry-run; Console install form.
+- **10c:** Launch package bakes `skills/` + `CORVUS_SKILLS_DIR`; adversarial tests (symlink, sha mismatch, latest pin, allowlist).
+- No guest mid-turn skill fetch; scripts default denied.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-20] - Planning: post–Phase 9 baseline + Phase 10–12 sequence
 
 **Documents Modified:**

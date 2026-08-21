@@ -206,7 +206,9 @@ def full_capability_manifest() -> AgentManifest:
         {
             "manifest_version": "1.0",
             "engines": {
-                "engine1": {"tools": ["echo", "terminal", "file_read"]},
+                "engine1": {
+                    "tools": ["echo", "terminal", "file_read", "skill_read", "skill_run"]
+                },
                 "engine2": {"platforms": ["api"]},
                 "engine3": {
                     "allowed_providers": ["openai", "stub", "dummy-http"],
