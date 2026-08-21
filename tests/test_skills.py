@@ -269,3 +269,193 @@ def test_skill_gate_requires_manifest_skill():
         {"skills": ["base-runtime"]}, "skill_read", {"skill": "base-runtime"}
     )
     assert ok is None
+
+
+def test_private_ip_source_blocked(monkeypatch):
+    from corvus.skills.netguard import assert_safe_http_url
+
+    monkeypatch.setenv(
+        "CORVUS_SKILL_SOURCE_ALLOWLIST", "http://127.0.0.1/,https://localhost/"
+    )
+    with pytest.raises(ValueError, match="blocked"):
+        assert_safe_http_url(
+            "http://127.0.0.1/skill.zip",
+            ["http://127.0.0.1/"],
+            empty_message="denied",
+        )
+
+
+def test_browse_disabled_without_registry(monkeypatch):
+    from corvus.skills.browse import BrowseDisabledError, assert_browse_enabled
+
+    monkeypatch.delenv("CORVUS_SKILL_REGISTRY_URL", raising=False)
+    monkeypatch.delenv("CORVUS_SKILL_REGISTRY_ALLOWLIST", raising=False)
+    with pytest.raises(BrowseDisabledError, match="CORVUS_SKILL_REGISTRY_URL"):
+        assert_browse_enabled()
+
+
+def test_browse_disabled_without_allowlist(monkeypatch):
+    from corvus.skills.browse import BrowseDisabledError, assert_browse_enabled
+
+    monkeypatch.setenv("CORVUS_SKILL_REGISTRY_URL", "https://registry.example")
+    monkeypatch.delenv("CORVUS_SKILL_REGISTRY_ALLOWLIST", raising=False)
+    with pytest.raises(BrowseDisabledError, match="ALLOWLIST"):
+        assert_browse_enabled()
+
+
+def test_list_skills_normalizes_registry_payload(monkeypatch):
+    from corvus.skills.browse import list_skills
+
+    monkeypatch.setenv("CORVUS_SKILL_REGISTRY_URL", "https://registry.example")
+    monkeypatch.setenv(
+        "CORVUS_SKILL_REGISTRY_ALLOWLIST", "https://registry.example"
+    )
+    monkeypatch.setattr(
+        "corvus.skills.netguard.assert_host_not_private", lambda _h: None
+    )
+    monkeypatch.setattr(
+        "corvus.skills.browse._registry_get",
+        lambda *_a, **_k: {
+            "skills": [
+                {
+                    "id": "demo-skill",
+                    "name": "Demo",
+                    "owner": "acme",
+                    "repo": "skills",
+                    "description": "A demo",
+                    "installs": 42,
+                }
+            ],
+            "page": 1,
+            "pageSize": 20,
+            "total": 1,
+        },
+    )
+    out = list_skills(query="demo", page=1, page_size=20)
+    assert out["enabled"] is True
+    assert len(out["skills"]) == 1
+    assert out["skills"][0]["id"] == "demo-skill"
+    assert out["skills"][0]["owner"] == "acme"
+    assert out["skills"][0]["installs"] == 42
+
+
+def test_prepare_install_dry_run_mocked(tmp_path: Path, monkeypatch):
+    from corvus.skills.browse import prepare_install
+
+    monkeypatch.setenv("CORVUS_SKILL_STORE_DIR", str(tmp_path / "store"))
+    monkeypatch.setenv(
+        "CORVUS_SKILL_SOURCE_ALLOWLIST",
+        "https://codeload.github.com/,https://api.github.com/",
+    )
+    zpath, digest = _make_skill_zip(tmp_path)
+    blob = zpath.read_bytes()
+    sha = "abcd" * 10
+    monkeypatch.setattr(
+        "corvus.skills.browse.resolve_github_commit", lambda *_a, **_k: sha
+    )
+    monkeypatch.setattr(
+        "corvus.skills.browse._http_get_bytes",
+        lambda *_a, **_k: blob,
+    )
+    monkeypatch.setattr("corvus.skills.fetch._download_bytes", lambda _s: blob)
+    result = prepare_install(
+        owner="acme",
+        repo="skills",
+        skill_id="demo-skill",
+        ref="main",
+        dry_run=True,
+    )
+    assert result["dry_run"] is True
+    assert result["name"] == "demo-skill"
+    assert result["sha256"] == digest
+    assert result["pin"] == sha
+    assert "SKILL.md" in result["files"]
+
+
+def test_find_skill_id_in_nested_archive(tmp_path: Path):
+    from corvus.skills.fetch import _find_skill_root
+
+    root = tmp_path / "extract" / "repo-deadbeef" / "skills" / "demo-skill"
+    root.mkdir(parents=True)
+    (root / "SKILL.md").write_text(
+        "---\nname: demo-skill\ndescription: x\n---\n\n", encoding="utf-8"
+    )
+    found = _find_skill_root(tmp_path / "extract", skill_id="demo-skill")
+    assert found == root
+
+
+@pytest.mark.asyncio
+async def test_skills_browse_api_disabled(app_ctx, monkeypatch):
+    monkeypatch.delenv("CORVUS_SKILL_REGISTRY_URL", raising=False)
+    from httpx import ASGITransport, AsyncClient
+
+    from corvus.management.api import create_app
+
+    app = create_app(app_ctx)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get(
+            "/v1/skills/browse", headers={"X-API-Key": "test-key"}
+        )
+        assert resp.status_code == 503
+        assert resp.json()["detail"]["code"] == "SKILL_BROWSE_DISABLED"
+
+
+@pytest.mark.asyncio
+async def test_skills_browse_prepare_install_api(app_ctx, tmp_path, monkeypatch):
+    monkeypatch.setenv("CORVUS_SKILL_STORE_DIR", str(tmp_path / "store"))
+    monkeypatch.setenv(
+        "CORVUS_SKILL_SOURCE_ALLOWLIST",
+        "https://codeload.github.com/,https://api.github.com/",
+    )
+    zpath, digest = _make_skill_zip(tmp_path)
+    blob = zpath.read_bytes()
+    sha = "ef01" * 10
+    monkeypatch.setattr(
+        "corvus.skills.browse.resolve_github_commit", lambda *_a, **_k: sha
+    )
+    monkeypatch.setattr(
+        "corvus.skills.browse._http_get_bytes", lambda *_a, **_k: blob
+    )
+    monkeypatch.setattr("corvus.skills.fetch._download_bytes", lambda _s: blob)
+
+    from httpx import ASGITransport, AsyncClient
+
+    from corvus.management.api import create_app
+
+    app = create_app(app_ctx)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        headers = {"X-API-Key": "test-key"}
+        dry = await client.post(
+            "/v1/skills/browse/prepare-install",
+            headers=headers,
+            json={
+                "owner": "acme",
+                "repo": "skills",
+                "skill_id": "demo-skill",
+                "ref": "main",
+                "dry_run": True,
+            },
+        )
+        assert dry.status_code == 200, dry.text
+        body = dry.json()
+        assert body["dry_run"] is True
+        assert body["sha256"] == digest
+        assert body["name"] == "demo-skill"
+
+        commit = await client.post(
+            "/v1/skills/browse/prepare-install",
+            headers=headers,
+            json={
+                "owner": "acme",
+                "repo": "skills",
+                "skill_id": "demo-skill",
+                "ref": sha,
+                "dry_run": False,
+            },
+        )
+        assert commit.status_code == 200, commit.text
+        listed = await client.get("/v1/catalog/skills", headers=headers)
+        names = {s["name"] for s in listed.json()["skills"]}
+        assert "demo-skill" in names

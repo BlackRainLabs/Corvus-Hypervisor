@@ -209,12 +209,16 @@ On runtime expiry the turn is moved to terminal `ABORTED` so stalled turns canno
 
 ### Skills library (Phase 10)
 
-Agent Skills (`SKILL.md`) packages install **on the control plane only** via `POST /v1/catalog/skills/install` (or Operator Console → Tools & Skills → Install).
+Agent Skills (`SKILL.md`) packages install **on the control plane only** via `POST /v1/catalog/skills/install` (or Operator Console → Tools & Skills → Install / Browse).
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `CORVUS_SKILL_SOURCE_ALLOWLIST` | empty | Comma-separated URL prefixes for remote installs; empty denies all remote. `file:` always allowed. |
+| `CORVUS_SKILL_SOURCE_ALLOWLIST` | empty | Comma-separated URL prefixes for remote installs; empty denies all remote. `file:` always allowed. For browse→GitHub install include `https://codeload.github.com/` and `https://api.github.com/`. |
 | `CORVUS_SKILL_STORE_DIR` | `<db-dir>/skill-store` | Content-addressed approved packages |
+| `CORVUS_SKILL_REGISTRY_URL` | empty | Base URL of a skills.sh-compatible registry API (browser disabled when empty) |
+| `CORVUS_SKILL_REGISTRY_ALLOWLIST` | empty | Comma-separated URL prefixes the registry base must match; deny-by-default |
+
+Browse endpoints: `GET /v1/skills/browse`, `GET /v1/skills/browse/{owner}/{repo}/{skill_id}`, `POST /v1/skills/browse/prepare-install`. Console: `/ui/tools/skills/browse`. Registry metadata is untrusted; prepare-install computes archive sha256 and uses the same pin+hash install path. Private/link-local resolved IPs are rejected for registry and source URLs.
 
 Install requires `source`, `pin` (not `latest`), and `sha256`. Use `dry_run: true` to preview. `allow_scripts` defaults false. Guests never fetch skills; launch packages bake selected skills under `skills/`. Engine 1 tools: `skill_read`, `skill_run` (RBAC + manifest `skills` allowlist). See [PHASE-10-SKILLS.md](PHASE-10-SKILLS.md) and [SECURITY.md](../../../SECURITY.md).
 

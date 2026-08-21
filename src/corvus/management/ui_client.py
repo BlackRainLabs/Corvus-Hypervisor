@@ -160,6 +160,7 @@ NAV: tuple[NavItem, ...] = (
         subs=(
             NavSub("Tools", "#tools"),
             NavSub("Skills", "#skills"),
+            NavSub("Browse", "/skills/browse"),
             NavSub("Workspaces", "#workspaces"),
             NavSub("Execution Policy", "#exec-policy"),
         ),

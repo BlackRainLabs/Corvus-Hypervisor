@@ -39,7 +39,7 @@
 | Agent Runtime         | Phase 4.1 Implemented (turn-abort hardened) | Loop + 4 engines; Engine 4 memory client during COLLECT; Engine 3 server LLM client; terminal `ABORTED` phase + bounded engine waits + loop-authoritative `--once` teardown so stalled/failed turns never hang; `corvus-loop`, `corvus-engine`, `corvus-runtime` |
 | LLM Gateway           | Phase 7.2+ Done     | Streaming (local tool_calls + hybrid hosted tools) + local/hybrid tool execution policy, Engine 3→1 coordinator loop |
 | Tool Gateway          | Phase 7.3 Done      | RBAC + manifest approval; VM-local execution only; builtins: echo/terminal/`file_read` |
-| Skill catalog         | Phase 10 Implemented | Agent Skills install (allowlist+pin+hash); Engine 1 `skill_read`/`skill_run`; launch bake |
+| Skill catalog         | Phase 10 Implemented | Agent Skills install + browse (allowlist+pin+hash); Engine 1 `skill_read`/`skill_run`; launch bake |
 | Workspace mounts      | Catalog + manifest  | GUI/API assign mounts; launcher configures **rootfs only** until Phase 11 |
 | Engine 4 Memory Client | MVP Implemented | Own-namespace write/query via Node IPC; cross-agent + elevation covered in integration tests |
 | Memory Service        | MVP Implemented | SQLite records, router dispatch, quota enforcement, audit; semantic search uses hash embeddings |

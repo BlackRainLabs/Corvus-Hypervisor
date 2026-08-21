@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
+{% block title %}Browse Skills — Corvus Hypervisor{% endblock %}
+{% block heading %}Browse open skills{% endblock %}
+{% block topmeta %}allowlisted registry only{% endblock %}
+{% block content %}
+{{ page_lead(page_leads.skills_browse) }}
+
+{% if not browse_enabled %}
+<div class="card">
+  <h2>Browser disabled</h2>
+  <p class="faint">Set <code>CORVUS_SKILL_REGISTRY_URL</code> to a skills.sh-compatible registry base URL and
+  <code>CORVUS_SKILL_REGISTRY_ALLOWLIST</code> to matching URL prefixes. Install still requires
+  <code>CORVUS_SKILL_SOURCE_ALLOWLIST</code> (include <code>https://codeload.github.com/</code> and
+  <code>https://api.github.com/</code> for GitHub archives).</p>
+  {% if browse_error %}<p class="toast err" style="position:static;margin-top:8px;">{{ browse_error }}</p>{% endif %}
+</div>
+{% else %}
+
+<div class="card">
+  <h2>Search registry {{ section_hint('read-only until install') }}</h2>
+  <form method="get" action="{{ prefix }}/tools/skills/browse">
+    <div class="form-row">
+      <div class="field" style="flex:2">
+        <label>Query</label>
+        <input name="q" value="{{ query }}" placeholder="Search skills…" autofocus>
+      </div>
+      <div class="field">
+        <label>Page</label>
+        <input name="page" type="number" min="1" value="{{ page }}">
+      </div>
+      <div class="field" style="align-self:end">
+        <button class="btn primary" type="submit">Search</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% if browse_error %}
+<div class="card"><p class="faint" style="color:var(--danger, #c44);">{{ browse_error }}</p></div>
+{% endif %}
+
+<div class="section" style="margin-top:16px;">
+  <h2>Results</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Repo</th>
+          <th>Installs</th>
+          <th>Description</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in skills %}
+        <tr>
+          <td><strong>{{ s.get('name') or s.get('id') }}</strong><div class="mono faint">{{ s.get('id') }}</div></td>
+          <td class="mono">{{ s.get('owner') }}/{{ s.get('repo') }}</td>
+          <td>{{ s.get('installs', 0) }}</td>
+          <td class="faint">{{ (s.get('description') or '')[:160] }}{% if (s.get('description') or '')|length > 160 %}…{% endif %}</td>
+          <td>
+            <details class="inline">
+              <summary>Preview / Install</summary>
+              <div class="body">
+                <p class="faint">Registry metadata is untrusted advertising. Preview runs a real dry-run (hash + <code>SKILL.md</code>) before commit.</p>
+                <form method="post" action="{{ prefix }}/tools/skills/browse/prepare">
+                  <input type="hidden" name="owner" value="{{ s.get('owner') }}">
+                  <input type="hidden" name="repo" value="{{ s.get('repo') }}">
+                  <input type="hidden" name="skill_id" value="{{ s.get('id') }}">
+                  <div class="form-row cols-3">
+                    <div class="field"><label>Git ref</label><input name="ref" value="HEAD" placeholder="HEAD, tag, or commit SHA"></div>
+                    <div class="field"><label><input type="checkbox" name="dry_run" value="1" checked> Dry run (preview)</label></div>
+                    <div class="field"><label><input type="checkbox" name="allow_scripts" value="1"> Allow scripts</label></div>
+                  </div>
+                  <button class="btn sm primary" type="submit">Run preview / install</button>
+                </form>
+              </div>
+            </details>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">{{ empty_state('No skills matched (try a broader query, or search to load the first page)') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if total %}
+  <p class="faint" style="margin-top:8px;">Total reported by registry: {{ total }}{% if total_pages %} · pages {{ total_pages }}{% endif %}</p>
+  {% endif %}
+</div>
+
+{% if preview %}
+<div class="card" style="margin-top:16px;" id="preview">
+  <h2>{% if preview.get('dry_run') %}Dry-run preview{% else %}Installed{% endif %}</h2>
+  <p><strong>{{ preview.get('name') }}</strong> @ {{ preview.get('version') }}</p>
+  <p class="faint">{{ preview.get('description') }}</p>
+  <dl class="kv">
+    <dt>Source</dt><dd class="mono">{{ preview.get('source') or preview.get('source_uri') }}</dd>
+    <dt>Pin (SHA)</dt><dd class="mono">{{ preview.get('pin') or preview.get('source_pin') }}</dd>
+    <dt>Package sha256</dt><dd class="mono">{{ preview.get('sha256') }}</dd>
+    <dt>Content hash</dt><dd class="mono">{{ preview.get('content_hash') }}</dd>
+    <dt>Files</dt><dd class="mono">{{ (preview.get('files') or []) | join(', ') }}</dd>
+  </dl>
+  {% if preview.get('dry_run') %}
+  <form method="post" action="{{ prefix }}/tools/skills/browse/prepare" style="margin-top:12px;">
+    <input type="hidden" name="owner" value="{{ preview.get('owner') }}">
+    <input type="hidden" name="repo" value="{{ preview.get('repo') }}">
+    <input type="hidden" name="skill_id" value="{{ preview.get('skill_id') or preview.get('name_hint') }}">
+    <input type="hidden" name="ref" value="{{ preview.get('pin') }}">
+    <input type="hidden" name="dry_run" value="">
+    <label style="margin-right:12px;"><input type="checkbox" name="allow_scripts" value="1" {% if preview.get('allow_scripts') %}checked{% endif %}> Allow scripts</label>
+    <button class="btn primary" type="submit" onclick="return confirm('Install this skill into the catalog?')">Commit install</button>
+    <a class="btn sm" href="{{ prefix }}/tools#skills">Back to catalog</a>
+  </form>
+  {% else %}
+  <a class="btn primary" href="{{ prefix }}/tools#skills">View catalog</a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

@@ -22,6 +22,7 @@ class InstallRequest:
     allow_scripts: bool = False
     dry_run: bool = False
     version: str | None = None
+    skill_id: str | None = None
 
 
 @dataclass
@@ -45,7 +46,11 @@ def install_skill(req: InstallRequest, store: SkillStore | None = None) -> Insta
     stage = staging_dir()
     try:
         skill_root = fetch_and_extract(
-            req.source, pin=req.pin, sha256=req.sha256, dest=stage
+            req.source,
+            pin=req.pin,
+            sha256=req.sha256,
+            dest=stage,
+            skill_id=req.skill_id,
         )
         files = validate_skill_tree(skill_root)
         parsed = parse_skill_md(

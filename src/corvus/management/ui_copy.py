@@ -94,6 +94,10 @@ PAGE_LEADS: dict[str, str] = {
     "tools": (
         "Server-owned tools, skills, and workspace catalogs baked into agent rootfs at launch."
     ),
+    "skills_browse": (
+        "Search an allowlisted public Agent Skills registry. "
+        "Install still requires pin, sha256, and CORVUS_SKILL_SOURCE_ALLOWLIST."
+    ),
     "inference": (
         "LLM providers, credentials, hosted-tool flags, and token budgets "
         "for the server-side gateway."

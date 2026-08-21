@@ -4,6 +4,26 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-20] - Phase 10d: secure open skill browser
+
+**Documents Modified:**
+- `src/corvus/skills/browse.py`, `netguard.py` (new); `fetch.py`, `install.py`, `__init__.py`
+- `src/corvus/management/api.py`, `ui.py`, `ui_client.py`, `ui_copy.py`
+- `src/corvus/management/templates/skills_browse.html` (new), `tools.html`, `base.html`
+- `tests/test_skills.py`
+- `PHASE-10-SKILLS.md`, `OPERATIONS.md`, `ROADMAP.md`, `SECURITY.md`, `COMPONENT-STATUS.md`, `tools/corvus.env.example`
+
+**Key Changes:**
+- Allowlisted skills.sh-compatible registry proxy: `GET /v1/skills/browse`, detail, `POST /v1/skills/browse/prepare-install`.
+- Console Browse page: search → dry-run preview (computed sha256 + files) → commit install via existing gates.
+- SSRF hardening: reject private/link-local/loopback IPs for registry and remote skill sources.
+- Env: `CORVUS_SKILL_REGISTRY_URL`, `CORVUS_SKILL_REGISTRY_ALLOWLIST` (deny-by-default when empty).
+- Guests still never browse or fetch skills.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-20] - Phase 10: secure skill runtime + open library
 
 **Documents Modified:**
