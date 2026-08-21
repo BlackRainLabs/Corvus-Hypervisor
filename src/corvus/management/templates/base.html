@@ -28,7 +28,11 @@
           <ul class="subnav">
             {% for sub in item.subs %}
             <li><a href="{{ prefix }}{{ item.path }}{{ sub.anchor }}"
-                   :class="{ 'active': hash === '{{ sub.anchor }}' || (hash === '' && {{ loop.first | tojson }}) }">
+                   {% if sub.anchor.startswith('/') %}
+                   class="{% if request.url.path.endswith(sub.anchor) %}active{% endif %}"
+                   {% else %}
+                   :class="{ 'active': hash === '{{ sub.anchor }}' || (hash === '' && {{ loop.first | tojson }}) }"
+                   {% endif %}>
               {{ sub.label }}
             </a></li>
             {% endfor %}

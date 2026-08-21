@@ -40,8 +40,10 @@ Before any real deployment:
 | Malicious open-source skill (prompt injection / exfil) | Admin-only install; dry-run preview; deny-by-default source allowlist; pin + content hash |
 | Path traversal / zip slip in package | Validated extract under content-addressed store; reject `..`, absolute paths, symlinks |
 | Unreviewed script execution | `allow_scripts` defaults false; scripts run only via Engine 1 after RBAC |
-| Supply-chain drift | Refuse floating `latest`; require sha256 match |
+| Supply-chain drift | Refuse floating `latest`; require sha256 match; browse prepare resolves concrete commit SHAs |
 | Guest escape via skill network | Install fetch is server-side only; guest has no skill registry access |
+| SSRF via registry or package URL | Separate registry allowlist; source allowlist; reject private/link-local/loopback resolved IPs |
+| Trusting marketplace metadata | Registry listings treated as advertising; install uses Corvus-downloaded bytes + hash |
 
 ## Scope
 

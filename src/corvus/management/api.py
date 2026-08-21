@@ -399,6 +399,137 @@ def create_app(ctx: AppContext) -> FastAPI:
             "entry": result.entry or None,
         }
 
+    @app.get("/v1/skills/browse")
+    async def skills_browse_list(
+        q: str = "",
+        page: int = 1,
+        page_size: int = 20,
+        _: None = Depends(require_api_key),
+    ) -> dict[str, Any]:
+        """Proxy search against an allowlisted skills.sh-compatible registry."""
+        from corvus.skills.browse import BrowseDisabledError, list_skills
+
+        try:
+            result = list_skills(query=q, page=page, page_size=page_size)
+        except BrowseDisabledError as exc:
+            raise HTTPException(
+                status_code=503, detail=_error("SKILL_BROWSE_DISABLED", str(exc))
+            ) from exc
+        except ValueError as exc:
+            await ctx.audit.log_api_mutation(
+                endpoint="GET /v1/skills/browse",
+                details={"event": "skill_browse", "action": "list", "reason": str(exc)},
+            )
+            raise HTTPException(
+                status_code=400, detail=_error("SKILL_BROWSE_DENIED", str(exc))
+            ) from exc
+        await ctx.audit.log_api_mutation(
+            endpoint="GET /v1/skills/browse",
+            details={
+                "event": "skill_browse",
+                "action": "list",
+                "query": q,
+                "count": len(result.get("skills") or []),
+            },
+        )
+        return result
+
+    @app.get("/v1/skills/browse/{owner}/{repo}/{skill_id}")
+    async def skills_browse_detail(
+        owner: str,
+        repo: str,
+        skill_id: str,
+        _: None = Depends(require_api_key),
+    ) -> dict[str, Any]:
+        from corvus.skills.browse import BrowseDisabledError, get_skill
+
+        try:
+            result = get_skill(owner, repo, skill_id)
+        except BrowseDisabledError as exc:
+            raise HTTPException(
+                status_code=503, detail=_error("SKILL_BROWSE_DISABLED", str(exc))
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400, detail=_error("SKILL_BROWSE_DENIED", str(exc))
+            ) from exc
+        await ctx.audit.log_api_mutation(
+            endpoint="GET /v1/skills/browse/{owner}/{repo}/{skill_id}",
+            details={
+                "event": "skill_browse",
+                "action": "detail",
+                "owner": owner,
+                "repo": repo,
+                "skill_id": skill_id,
+            },
+        )
+        return result
+
+    @app.post("/v1/skills/browse/prepare-install")
+    async def skills_browse_prepare_install(
+        body: dict[str, Any], _: None = Depends(require_api_key)
+    ) -> dict[str, Any]:
+        """Resolve GitHub archive, hash, then dry-run or commit via install path."""
+        from corvus.skills.browse import prepare_install
+        from corvus.skills.store import SkillStore
+
+        owner = str(body.get("owner") or "").strip()
+        repo = str(body.get("repo") or "").strip()
+        skill_id = str(body.get("skill_id") or "").strip()
+        ref = str(body.get("ref") or "HEAD").strip() or "HEAD"
+        dry_run = bool(body.get("dry_run", True))
+        allow_scripts = bool(body.get("allow_scripts", False))
+        if not owner or not repo or not skill_id:
+            raise HTTPException(
+                status_code=422,
+                detail=_error(
+                    "SKILL_PREPARE_INVALID",
+                    "owner, repo, and skill_id are required",
+                ),
+            )
+        try:
+            result = prepare_install(
+                owner=owner,
+                repo=repo,
+                skill_id=skill_id,
+                ref=ref,
+                allow_scripts=allow_scripts,
+                dry_run=dry_run,
+                store=SkillStore(),
+            )
+        except ValueError as exc:
+            await ctx.audit.log_api_mutation(
+                endpoint="POST /v1/skills/browse/prepare-install",
+                details={
+                    "event": "skill_deny",
+                    "owner": owner,
+                    "repo": repo,
+                    "skill_id": skill_id,
+                    "ref": ref,
+                    "reason": str(exc),
+                },
+            )
+            raise HTTPException(
+                status_code=400, detail=_error("SKILL_INSTALL_DENIED", str(exc))
+            ) from exc
+
+        if not dry_run and result.get("entry"):
+            await ctx.catalog_store.upsert("skills", result["entry"])
+            _after_catalog_write("skills")
+            await ctx.audit.log_api_mutation(
+                endpoint="POST /v1/skills/browse/prepare-install",
+                details={
+                    "event": "skill_install",
+                    "name": result.get("name"),
+                    "source": result.get("source"),
+                    "pin": result.get("pin"),
+                    "content_hash": result.get("content_hash"),
+                    "allow_scripts": allow_scripts,
+                    "via": "browse",
+                },
+            )
+        return result
+
     @app.get("/v1/catalog/tools")
     async def catalog_tools(_: None = Depends(require_api_key)) -> dict[str, Any]:
         return {"tools": ctx.catalog_store.catalog.api_payload()["tools"]}

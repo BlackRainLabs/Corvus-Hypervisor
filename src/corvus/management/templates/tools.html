@@ -8,6 +8,7 @@
 <div class="tabs">
   <a href="#tools" :class="{ 'active': hash === '#tools' || hash === '' }">Tools</a>
   <a href="#skills" :class="{ 'active': hash === '#skills' }">Skills</a>
+  <a href="{{ prefix }}/tools/skills/browse">Browse</a>
   <a href="#workspaces" :class="{ 'active': hash === '#workspaces' }">Workspaces</a>
   <a href="#exec-policy" :class="{ 'active': hash === '#exec-policy' }">Execution Policy</a>
 </div>
@@ -127,7 +128,8 @@
   </div>
   <div class="card" style="margin-top:12px;">
     <h3>Install skill from source (Agent Skills)</h3>
-    <p class="faint">Admin-only. Source must match <code>CORVUS_SKILL_SOURCE_ALLOWLIST</code> (or <code>file:</code>). Pin + sha256 required. Scripts default off.</p>
+    <p class="faint">Admin-only. Source must match <code>CORVUS_SKILL_SOURCE_ALLOWLIST</code> (or <code>file:</code>). Pin + sha256 required. Scripts default off.
+      Or <a href="{{ prefix }}/tools/skills/browse">browse an allowlisted registry</a>.</p>
     <form method="post" action="{{ prefix }}/tools/skills/install">
       <div class="form-row">
         <div class="field"><label>Source URL</label><input name="source" placeholder="file:/path/to/skill.zip or https://..." required></div>

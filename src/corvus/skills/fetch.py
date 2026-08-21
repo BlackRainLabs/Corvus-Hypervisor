@@ -13,12 +13,11 @@ from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+from corvus.skills.netguard import assert_safe_http_url, parse_allowlist
+
 
 def skill_source_allowlist() -> list[str]:
-    raw = os.environ.get("CORVUS_SKILL_SOURCE_ALLOWLIST", "").strip()
-    if not raw:
-        return []
-    return [p.strip() for p in raw.split(",") if p.strip()]
+    return parse_allowlist(os.environ.get("CORVUS_SKILL_SOURCE_ALLOWLIST", ""))
 
 
 def assert_source_allowed(source: str) -> None:
@@ -26,13 +25,14 @@ def assert_source_allowed(source: str) -> None:
     if source.startswith("file:"):
         # Local file installs always allowed for operator/dev (still hashed).
         return
-    if not allow:
-        raise ValueError(
+    assert_safe_http_url(
+        source,
+        allow,
+        empty_message=(
             "remote skill install denied: set CORVUS_SKILL_SOURCE_ALLOWLIST "
             "to comma-separated URL prefixes"
-        )
-    if not any(source.startswith(prefix) for prefix in allow):
-        raise ValueError(f"source not on allowlist: {source}")
+        ),
+    )
 
 
 def _download_bytes(source: str) -> bytes:
@@ -55,6 +55,7 @@ def fetch_and_extract(
     pin: str,
     sha256: str,
     dest: Path,
+    skill_id: str | None = None,
 ) -> Path:
     """Download package, verify sha256, extract into dest. Returns skill root dir."""
     if not pin or pin.lower() == "latest":
@@ -82,8 +83,7 @@ def fetch_and_extract(
         except tarfile.TarError as exc:
             raise ValueError("package is not a valid zip or tar archive") from exc
 
-    skill_root = _find_skill_root(extract_root)
-    return skill_root
+    return _find_skill_root(extract_root, skill_id=skill_id)
 
 
 def _safe_extract_zip(zf: zipfile.ZipFile, dest: Path) -> None:
@@ -116,7 +116,23 @@ def _safe_extract_tar(tf: tarfile.TarFile, dest: Path) -> None:
             shutil.copyfileobj(src, out)
 
 
-def _find_skill_root(extract_root: Path) -> Path:
+def _find_skill_root(extract_root: Path, *, skill_id: str | None = None) -> Path:
+    if skill_id:
+        # Bound walk: GitHub archives nest under owner-repo-sha/; skills may be deeper.
+        matches: list[Path] = []
+        for path in extract_root.rglob("SKILL.md"):
+            if not path.is_file():
+                continue
+            if path.parent.name == skill_id:
+                matches.append(path.parent)
+            if len(matches) > 20:
+                break
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise ValueError(f"multiple skill directories named {skill_id!r} in archive")
+        raise ValueError(f"skill {skill_id!r} with SKILL.md not found in archive")
+
     direct = extract_root / "SKILL.md"
     if direct.is_file():
         return extract_root

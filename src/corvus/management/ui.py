@@ -631,6 +631,96 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             msg=f"Installed skill {data.get('name')} ({data.get('content_hash')})",
         )
 
+    async def _skills_browse_context(
+        request: Request,
+        *,
+        q: str = "",
+        page: int = 1,
+        preview: dict[str, Any] | None = None,
+        browse_error: str = "",
+    ) -> HTMLResponse:
+        browse_enabled = True
+        skills: list[Any] = []
+        total = None
+        total_pages = None
+        err = browse_error
+        ok, data, status = await api.call(
+            "GET",
+            "/v1/skills/browse",
+            params={"q": q, "page": page, "page_size": 20},
+        )
+        if status == 503:
+            browse_enabled = False
+            err = err or _error_text(data, "Skill browser disabled")
+        elif not ok:
+            err = err or _error_text(data, "Browse failed")
+        else:
+            skills = data.get("skills") or []
+            total = data.get("total")
+            total_pages = data.get("total_pages")
+        return render(
+            request,
+            "skills_browse.html",
+            "tools",
+            browse_enabled=browse_enabled,
+            browse_error=err,
+            query=q,
+            page=page,
+            skills=skills,
+            total=total,
+            total_pages=total_pages,
+            preview=preview,
+        )
+
+    @router.get("/tools/skills/browse", response_class=HTMLResponse)
+    async def skills_browse_page(
+        request: Request,
+        q: str = "",
+        page: int = 1,
+    ) -> HTMLResponse:
+        require_session(request)
+        return await _skills_browse_context(request, q=q, page=page)
+
+    @router.post("/tools/skills/browse/prepare", response_model=None)
+    async def skills_browse_prepare_form(
+        request: Request,
+        owner: str = Form(...),
+        repo: str = Form(...),
+        skill_id: str = Form(...),
+        ref: str = Form(default="HEAD"),
+        dry_run: str = Form(default=""),
+        allow_scripts: str = Form(default=""),
+    ) -> HTMLResponse | RedirectResponse:
+        require_session(request)
+        is_dry = dry_run in {"1", "true", "on"}
+        body = {
+            "owner": owner.strip(),
+            "repo": repo.strip(),
+            "skill_id": skill_id.strip(),
+            "ref": (ref or "HEAD").strip() or "HEAD",
+            "dry_run": is_dry,
+            "allow_scripts": allow_scripts in {"1", "true", "on"},
+        }
+        q = f"{body['owner']}/{body['repo']}"
+        ok, data, _ = await api.call(
+            "POST", "/v1/skills/browse/prepare-install", json=body
+        )
+        if not ok:
+            return await _skills_browse_context(
+                request,
+                q=q,
+                page=1,
+                browse_error=_error_text(data, "Prepare/install failed"),
+            )
+        if is_dry:
+            return await _skills_browse_context(
+                request, q=q, page=1, preview=data
+            )
+        return redirect(
+            "/tools#skills",
+            msg=f"Installed skill {data.get('name')} ({data.get('content_hash')})",
+        )
+
     @router.post("/tools/catalog/{kind}/{entry_id}/delete")
     async def catalog_delete_form(
         request: Request, kind: str, entry_id: str
