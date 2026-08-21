@@ -197,7 +197,7 @@ Phases **1–9.6 are closed**. Package version remains **0.8.0** until a Phase 1
 
 | Area | Shipped | Not yet |
 |------|---------|---------|
-| Skills | Catalog entry `base-runtime`, manifest allowlist, GUI CRUD | No Engine 1 / runtime skill loader (`src/corvus/runtime` has zero skill references) |
+| Skills | Catalog + Engine 1 `skill_read`/`skill_run`; gated Agent Skills install | Guest mid-turn download (still forbidden); scripts require `allow_scripts` |
 | Workspaces | Catalog `default`, `WorkspaceMount` on manifest, GUI assign | `vm/spec.py` / `vm/launcher.py` configure **rootfs drive only** — no secondary FC mounts |
 | Tools | Registry: `echo`, `terminal`, `file_read` | Broader catalog tools |
 | Embeddings | sqlite-vec semantic API | Hash bag-of-words only (`memory/embeddings.py`) |

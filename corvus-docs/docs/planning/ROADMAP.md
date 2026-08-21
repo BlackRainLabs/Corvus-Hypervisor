@@ -10,7 +10,7 @@
 
 ## Near Term (Next 1-2 Months) — ordered
 
-1. **Phase 10 — Skill runtime** — Execute approved skills in Engine 1 after server RBAC; catalog/UI already exist. See [PHASE-10-SKILLS.md](PHASE-10-SKILLS.md).
+1. **Phase 10 — Secure skill runtime + open library** — Engine 1 skill tools; gated Agent Skills (`SKILL.md`) install from allowlisted sources; launch bake. See [PHASE-10-SKILLS.md](PHASE-10-SKILLS.md).
 2. **Phase 11 — Firecracker workspace mounts** — Honor manifest `workspaces` as secondary drives (`vm/spec.py`, `vm/launcher.py`); GUI already assigns mounts.
 3. **Phase 12 — Tool + ops depth** — Additional catalog tools beyond echo/terminal/`file_read`; fuller audit-event webhook taxonomy; FC ops cadence / optional self-hosted smoke.
 

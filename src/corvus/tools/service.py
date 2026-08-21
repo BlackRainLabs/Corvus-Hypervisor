@@ -62,6 +62,16 @@ class ToolGatewayService:
                 reason="tool not allowed by agent manifest",
             )
 
+        skill_err = self._skill_gate(agent["manifest"], payload.tool_name, payload.arguments)
+        if skill_err is not None:
+            return await self._deny_call(
+                message,
+                tool_name=payload.tool_name,
+                user_id=user_id,
+                code=skill_err[0],
+                reason=skill_err[1],
+            )
+
         await self.audit.log_tool_operation(
             message,
             phase="call_approved",
@@ -184,3 +194,19 @@ class ToolGatewayService:
             error=reason,
             error_code=code,
         )
+
+    @staticmethod
+    def _skill_gate(
+        manifest: dict, tool_name: str, arguments: dict | None
+    ) -> tuple[str, str] | None:
+        """Extra gates for skill_read / skill_run."""
+        if tool_name not in {"skill_read", "skill_run"}:
+            return None
+        args = arguments or {}
+        skill = str(args.get("skill") or args.get("name") or "").strip()
+        if not skill:
+            return ("SKILL_NAME_REQUIRED", "skill_read/skill_run require skill=")
+        allowed_skills = set(manifest.get("skills") or [])
+        if skill not in allowed_skills:
+            return ("SKILL_NOT_ALLOWED", "skill not allowed by agent manifest")
+        return None

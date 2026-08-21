@@ -207,6 +207,17 @@ Turn timeouts (two separate env vars — do not rename/unify casually):
 
 On runtime expiry the turn is moved to terminal `ABORTED` so stalled turns cannot hang the process, which keeps concurrent multi-agent runs reliable.
 
+### Skills library (Phase 10)
+
+Agent Skills (`SKILL.md`) packages install **on the control plane only** via `POST /v1/catalog/skills/install` (or Operator Console → Tools & Skills → Install).
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CORVUS_SKILL_SOURCE_ALLOWLIST` | empty | Comma-separated URL prefixes for remote installs; empty denies all remote. `file:` always allowed. |
+| `CORVUS_SKILL_STORE_DIR` | `<db-dir>/skill-store` | Content-addressed approved packages |
+
+Install requires `source`, `pin` (not `latest`), and `sha256`. Use `dry_run: true` to preview. `allow_scripts` defaults false. Guests never fetch skills; launch packages bake selected skills under `skills/`. Engine 1 tools: `skill_read`, `skill_run` (RBAC + manifest `skills` allowlist). See [PHASE-10-SKILLS.md](PHASE-10-SKILLS.md) and [SECURITY.md](../../../SECURITY.md).
+
 Correlation depth: multi-hop tool turns increment chain depth; default `CORVUS_MAX_CHAIN_DEPTH` is **16**.
 
 ### Operator chat (console + API)

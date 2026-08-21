@@ -23,6 +23,14 @@ class SkillCatalogEntry(BaseModel):
     runtime_dependencies: list[str] = Field(default_factory=list)
     exposed_tool_schemas: list[str] = Field(default_factory=list)
     package_source: str
+    format: Literal["builtin", "agentskills"] = "builtin"
+    content_hash: str | None = None
+    source_uri: str | None = None
+    source_pin: str | None = None
+    allow_scripts: bool = False
+    install_status: Literal["approved", "pending", "rejected"] = "approved"
+    description: str = ""
+    store_path: str | None = None
 
 
 class LLMProviderCatalogEntry(BaseModel):
@@ -105,14 +113,35 @@ DEFAULT_CATALOG = CapabilityCatalog(
             package_source="builtin",
             risk_level="low",
         ),
+        "skill_read": ToolCatalogEntry(
+            name="skill_read",
+            version="1.0",
+            entrypoint="corvus.skills.runner",
+            permissions=["skill:read"],
+            package_source="builtin",
+            risk_level="low",
+        ),
+        "skill_run": ToolCatalogEntry(
+            name="skill_run",
+            version="1.0",
+            entrypoint="corvus.skills.runner",
+            permissions=["skill:run"],
+            package_source="builtin",
+            risk_level="high",
+        ),
     },
     skills={
         "base-runtime": SkillCatalogEntry(
             name="base-runtime",
             version="1.0",
             runtime_dependencies=["corvus-runtime"],
-            exposed_tool_schemas=[],
+            exposed_tool_schemas=["skill_read", "skill_run"],
             package_source="builtin",
+            format="builtin",
+            description="Builtin Corvus runtime skill (ping / instruction stub).",
+            allow_scripts=False,
+            install_status="approved",
+            content_hash="builtin:base-runtime:1.0",
         )
     },
     llm_providers={

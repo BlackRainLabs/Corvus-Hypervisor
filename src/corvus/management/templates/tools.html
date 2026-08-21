@@ -86,14 +86,15 @@
   <h2>Skills {{ section_hint('editable') }}</h2>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Name</th><th>Version</th><th>Runtime Dependencies</th><th>Exposed Schemas</th><th>Source</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Version</th><th>Format</th><th>Hash</th><th>Scripts</th><th>Source</th><th></th></tr></thead>
       <tbody>
       {% for s in skills %}
         <tr>
           <td><strong>{{ s.get('name') }}</strong></td>
           <td>{{ s.get('version') }}</td>
-          <td class="mono">{{ s.get('runtime_dependencies', []) | join(', ') }}</td>
-          <td>{{ s.get('exposed_tool_schemas', []) | join(', ') or '-' }}</td>
+          <td class="faint">{{ s.get('format', 'builtin') }}</td>
+          <td class="mono faint">{{ (s.get('content_hash') or '-')[:12] }}</td>
+          <td>{{ 'yes' if s.get('allow_scripts') else 'no' }}</td>
           <td class="faint">{{ s.get('package_source') }}</td>
           <td>
             <details class="inline">
@@ -123,6 +124,22 @@
       {% endfor %}
       </tbody>
     </table>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <h3>Install skill from source (Agent Skills)</h3>
+    <p class="faint">Admin-only. Source must match <code>CORVUS_SKILL_SOURCE_ALLOWLIST</code> (or <code>file:</code>). Pin + sha256 required. Scripts default off.</p>
+    <form method="post" action="{{ prefix }}/tools/skills/install">
+      <div class="form-row">
+        <div class="field"><label>Source URL</label><input name="source" placeholder="file:/path/to/skill.zip or https://..." required></div>
+        <div class="field"><label>Pin</label><input name="pin" placeholder="v1.0.0 or commit" required></div>
+        <div class="field"><label>SHA256</label><input name="sha256" required></div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="field"><label><input type="checkbox" name="dry_run" value="1" checked> Dry run (preview only)</label></div>
+        <div class="field"><label><input type="checkbox" name="allow_scripts" value="1"> Allow scripts</label></div>
+      </div>
+      <button class="btn primary" type="submit">Install / Preview</button>
+    </form>
   </div>
   <div class="card" style="margin-top:12px;">
     <h3>Add skill</h3>

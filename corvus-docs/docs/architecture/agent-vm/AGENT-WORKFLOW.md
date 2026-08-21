@@ -58,7 +58,9 @@ The Agent Loop acts as a lightweight state machine with the following mandatory 
 ## Engine-Specific Workflow Rules
 
 ### Engine 1 – Tools & Skills
-- May only execute tools/skills that were baked into the immutable rootfs at launch **and** listed in the agent manifest.
+- May only execute tools/skills that were baked into the immutable rootfs / launch package at launch **and** listed in the agent manifest.
+- Skills use mediated tools `skill_read` (load `SKILL.md`) and `skill_run` (optional scripts when catalog `allow_scripts=true`). Skill name must appear in manifest `skills`.
+- Open Agent Skills packages are installed on the **server** only (allowlist + pin + sha256); never fetched from the guest mid-turn. See PHASE-10-SKILLS.md.
 - Must send `tool_call` through Corvus Node → Corvus Server; **must not execute** until inbound `tool_call_response` has `approved: true`.
 - Execution is **local to the agent VM** (e.g. `terminal`, `echo`); the server never runs tool code.
 - Must report outcomes via `tool_result` back through the server for audit.
