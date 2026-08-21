@@ -95,7 +95,7 @@ PAGE_LEADS: dict[str, str] = {
         "Server-owned tools, skills, and workspace catalogs baked into agent rootfs at launch."
     ),
     "skills_browse": (
-        "Search an allowlisted public Agent Skills registry. "
+        "Search large public Agent Skills catalogs (SkillsMP by default). "
         "Install still requires pin, sha256, and CORVUS_SKILL_SOURCE_ALLOWLIST."
     ),
     "inference": (

@@ -4,6 +4,23 @@
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
 
+## [2026-08-20] - Phase 10d: large open skill catalogs (SkillsMP + browse UX)
+
+**Documents Modified:**
+- `src/corvus/skills/browse.py`
+- `src/corvus/management/templates/skills_browse.html`, `ui.py`, `ui_copy.py`
+- `tools/corvus.env.example`, `OPERATIONS.md`, `PHASE-10-SKILLS.md`, `CHANGES.md`
+- `tests/test_skills.py`
+
+**Key Changes:**
+- Registry adapters for large public catalogs: **SkillsMP** (default recommendation, no API key), mastra/skills-api mirrors, and skills.sh v1 (Bearer token).
+- Console browse UX: search empty = popular listing, page size 20/50/100, prev/next + go-to-page, result counts, registry badge.
+- Install path unchanged (pin + sha256 + source allowlist).
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
+
 ## [2026-08-20] - Phase 10d: secure open skill browser
 
 **Documents Modified:**

@@ -43,7 +43,7 @@ Before any real deployment:
 | Supply-chain drift | Refuse floating `latest`; require sha256 match; browse prepare resolves concrete commit SHAs |
 | Guest escape via skill network | Install fetch is server-side only; guest has no skill registry access |
 | SSRF via registry or package URL | Separate registry allowlist; source allowlist; reject private/link-local/loopback resolved IPs |
-| Trusting marketplace metadata | Registry listings treated as advertising; install uses Corvus-downloaded bytes + hash |
+| Trusting marketplace metadata | Registry listings (SkillsMP / skills.sh / mirrors) treated as advertising; install uses Corvus-downloaded bytes + hash |
 
 ## Scope
 

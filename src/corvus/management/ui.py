@@ -636,6 +636,7 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         *,
         q: str = "",
         page: int = 1,
+        page_size: int = 20,
         preview: dict[str, Any] | None = None,
         browse_error: str = "",
     ) -> HTMLResponse:
@@ -643,11 +644,17 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         skills: list[Any] = []
         total = None
         total_pages = None
+        has_next = False
+        has_prev = False
+        adapter = ""
+        registry_url = ""
         err = browse_error
+        page_size = min(100, max(1, int(page_size or 20)))
+        page = max(1, int(page or 1))
         ok, data, status = await api.call(
             "GET",
             "/v1/skills/browse",
-            params={"q": q, "page": page, "page_size": 20},
+            params={"q": q, "page": page, "page_size": page_size},
         )
         if status == 503:
             browse_enabled = False
@@ -658,6 +665,12 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             skills = data.get("skills") or []
             total = data.get("total")
             total_pages = data.get("total_pages")
+            has_next = bool(data.get("has_next"))
+            has_prev = bool(data.get("has_prev"))
+            adapter = str(data.get("adapter") or "")
+            registry_url = str(data.get("registry_url") or "")
+            page = int(data.get("page") or page)
+            page_size = int(data.get("page_size") or page_size)
         return render(
             request,
             "skills_browse.html",
@@ -666,9 +679,14 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
             browse_error=err,
             query=q,
             page=page,
+            page_size=page_size,
             skills=skills,
             total=total,
             total_pages=total_pages,
+            has_next=has_next,
+            has_prev=has_prev,
+            adapter=adapter,
+            registry_url=registry_url,
             preview=preview,
         )
 
@@ -677,9 +695,12 @@ def mount_ui(app: FastAPI, ctx: AppContext) -> None:
         request: Request,
         q: str = "",
         page: int = 1,
+        page_size: int = 20,
     ) -> HTMLResponse:
         require_session(request)
-        return await _skills_browse_context(request, q=q, page=page)
+        return await _skills_browse_context(
+            request, q=q, page=page, page_size=page_size
+        )
 
     @router.post("/tools/skills/browse/prepare", response_model=None)
     async def skills_browse_prepare_form(

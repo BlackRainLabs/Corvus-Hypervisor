@@ -28,7 +28,7 @@
 | Control | Behavior |
 |---------|----------|
 | Source allowlist | `CORVUS_SKILL_SOURCE_ALLOWLIST` (comma-separated URL prefixes). Empty = deny all remote installs. |
-| Registry allowlist | `CORVUS_SKILL_REGISTRY_URL` + `CORVUS_SKILL_REGISTRY_ALLOWLIST`. Empty = browser disabled (503). |
+| Registry allowlist | `CORVUS_SKILL_REGISTRY_URL` + `CORVUS_SKILL_REGISTRY_ALLOWLIST`. Empty = browser disabled (503). Recommended public catalog: SkillsMP (`https://skillsmp.com`). Adapters: `skillsmp`, `mastra`, `skills_sh` (+ optional `CORVUS_SKILL_REGISTRY_TOKEN`). |
 | SSRF | Remote registry/source URLs reject private/link-local/loopback resolved IPs. |
 | Pin + hash | Install requires pin (tag/commit/version label) and **sha256** of the package bytes. Browse prepare resolves Git refs to full commit SHAs (no `latest`). |
 | Validate | Strict `SKILL.md` frontmatter; reject traversal, symlinks, oversized trees. |

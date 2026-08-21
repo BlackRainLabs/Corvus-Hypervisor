@@ -333,10 +333,91 @@ def test_list_skills_normalizes_registry_payload(monkeypatch):
     )
     out = list_skills(query="demo", page=1, page_size=20)
     assert out["enabled"] is True
+    assert out["adapter"] == "mastra"
     assert len(out["skills"]) == 1
-    assert out["skills"][0]["id"] == "demo-skill"
+    assert out["skills"][0]["id"] == "Demo" or out["skills"][0]["name"] == "Demo"
     assert out["skills"][0]["owner"] == "acme"
     assert out["skills"][0]["installs"] == 42
+
+
+def test_skillsmp_normalize_github_tree_url():
+    from corvus.skills.browse import _normalize_skill
+
+    skill = _normalize_skill(
+        {
+            "id": "openclaw-openclaw-agents-skills-discrawl-skill-md",
+            "name": "discrawl",
+            "author": "openclaw",
+            "description": "Discord archive skill",
+            "githubUrl": (
+                "https://github.com/openclaw/openclaw/tree/main/"
+                ".agents/skills/discrawl"
+            ),
+            "stars": 1000,
+            "route": {
+                "ownerSlug": "openclaw",
+                "repoSlug": "openclaw",
+                "sourceSkillPath": ".agents/skills/discrawl/SKILL.md",
+            },
+        }
+    )
+    assert skill is not None
+    assert skill.id == "discrawl"
+    assert skill.owner == "openclaw"
+    assert skill.repo == "openclaw"
+    assert skill.stars == 1000
+    assert skill.ref_hint == "main"
+
+
+def test_skillsmp_list_uses_search_endpoint(monkeypatch):
+    from corvus.skills.browse import list_skills
+
+    monkeypatch.setenv("CORVUS_SKILL_REGISTRY_URL", "https://skillsmp.com")
+    monkeypatch.setenv("CORVUS_SKILL_REGISTRY_ALLOWLIST", "https://skillsmp.com")
+    monkeypatch.setattr(
+        "corvus.skills.netguard.assert_host_not_private", lambda _h: None
+    )
+    calls: list[tuple[str, dict]] = []
+
+    def fake_get(path, *, params=None):
+        calls.append((path, params or {}))
+        return {
+            "success": True,
+            "data": {
+                "skills": [
+                    {
+                        "name": "secure-code-review",
+                        "author": "acme",
+                        "githubUrl": "https://github.com/acme/skills/tree/main/secure-code-review",
+                        "description": "Review checklist",
+                        "stars": 9,
+                    }
+                ],
+                "pagination": {
+                    "page": 1,
+                    "limit": 20,
+                    "total": 1200,
+                    "totalPages": 60,
+                    "hasNext": True,
+                    "hasPrev": False,
+                },
+            },
+        }
+
+    monkeypatch.setattr("corvus.skills.browse._registry_get", fake_get)
+    out = list_skills(query="secure", page=1, page_size=20)
+    assert out["adapter"] == "skillsmp"
+    assert out["total"] == 1200
+    assert out["has_next"] is True
+    assert out["skills"][0]["id"] == "secure-code-review"
+    assert calls[0][0] == "/api/v1/skills/search"
+    assert calls[0][1]["q"] == "secure"
+
+    calls.clear()
+    list_skills(query="", page=2, page_size=50)
+    assert calls[0][0] == "/api/skills"
+    assert calls[0][1]["page"] == 2
+    assert calls[0][1]["limit"] == 50
 
 
 def test_prepare_install_dry_run_mocked(tmp_path: Path, monkeypatch):
