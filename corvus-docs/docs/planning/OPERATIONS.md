@@ -215,8 +215,10 @@ Agent Skills (`SKILL.md`) packages install **on the control plane only** via `PO
 |----------|---------|---------|
 | `CORVUS_SKILL_SOURCE_ALLOWLIST` | empty | Comma-separated URL prefixes for remote installs; empty denies all remote. `file:` always allowed. For browse→GitHub install include `https://codeload.github.com/` and `https://api.github.com/`. |
 | `CORVUS_SKILL_STORE_DIR` | `<db-dir>/skill-store` | Content-addressed approved packages |
-| `CORVUS_SKILL_REGISTRY_URL` | empty | Base URL of a skills.sh-compatible registry API (browser disabled when empty) |
+| `CORVUS_SKILL_REGISTRY_URL` | empty | Base URL of an open skill catalog. Recommended: `https://skillsmp.com` (large public index, no API key). Also: mastra/skills-api mirrors; `https://skills.sh` with token. |
 | `CORVUS_SKILL_REGISTRY_ALLOWLIST` | empty | Comma-separated URL prefixes the registry base must match; deny-by-default |
+| `CORVUS_SKILL_REGISTRY_ADAPTER` | auto | Force `skillsmp`, `mastra`, or `skills_sh` (otherwise inferred from hostname) |
+| `CORVUS_SKILL_REGISTRY_TOKEN` | empty | Optional Bearer token (required for skills.sh / some directories) |
 
 Browse endpoints: `GET /v1/skills/browse`, `GET /v1/skills/browse/{owner}/{repo}/{skill_id}`, `POST /v1/skills/browse/prepare-install`. Console: `/ui/tools/skills/browse`. Registry metadata is untrusted; prepare-install computes archive sha256 and uses the same pin+hash install path. Private/link-local resolved IPs are rejected for registry and source URLs.
 
