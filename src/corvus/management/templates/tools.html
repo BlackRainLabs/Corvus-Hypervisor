@@ -1,20 +1,22 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state, table_filter %}
 {% block title %}Tools & Skills — Corvus Hypervisor{% endblock %}
 {% block heading %}Tools &amp; Skills{% endblock %}
 {% block topmeta %}server-owned catalogs{% endblock %}
 {% block content %}
 {{ page_lead(page_leads.tools) }}
 <div class="tabs">
-  <a href="#tools" :class="{ 'active': hash === '#tools' || hash === '' }">Tools</a>
-  <a href="#skills" :class="{ 'active': hash === '#skills' }">Skills</a>
+  <a href="#tools" :class="{ 'active': isTab('tools', true) }">Tools</a>
+  <a href="#skills" :class="{ 'active': isTab('skills') }">Skills</a>
   <a href="{{ prefix }}/tools/skills/browse">Browse</a>
-  <a href="#workspaces" :class="{ 'active': hash === '#workspaces' }">Workspaces</a>
-  <a href="#exec-policy" :class="{ 'active': hash === '#exec-policy' }">Execution Policy</a>
+  <a href="#workspaces" :class="{ 'active': isTab('workspaces') }">Workspaces</a>
+  <a href="#exec-policy" :class="{ 'active': isTab('exec-policy') }">Execution Policy</a>
 </div>
 
-<div class="section" id="tools">
+<div class="section" id="tools" x-show="isTab('tools', true)" x-cloak>
   <h2>Tools {{ section_hint('editable') }}</h2>
+  <div class="filterable">
+  {{ table_filter('Filter tools…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Name</th><th>Version</th><th>Entrypoint</th><th>Permissions</th><th>Risk</th><th>Source</th><th></th></tr></thead>
@@ -63,7 +65,8 @@
       </tbody>
     </table>
   </div>
-  <div class="card" style="margin-top:12px;">
+  </div>
+  <div class="card mt">
     <h3>Add tool</h3>
     <form method="post" action="{{ prefix }}/tools/catalog/tools">
       <div class="form-row cols-3">
@@ -83,8 +86,10 @@
   </div>
 </div>
 
-<div class="section" id="skills">
+<div class="section" id="skills" x-show="isTab('skills')" x-cloak>
   <h2>Skills {{ section_hint('editable') }}</h2>
+  <div class="filterable">
+  {{ table_filter('Filter skills…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Name</th><th>Version</th><th>Format</th><th>Hash</th><th>Scripts</th><th>Source</th><th></th></tr></thead>
@@ -126,7 +131,8 @@
       </tbody>
     </table>
   </div>
-  <div class="card" style="margin-top:12px;">
+  </div>
+  <div class="card mt">
     <h3>Install skill from source (Agent Skills)</h3>
     <p class="faint">Admin-only. Source must match <code>CORVUS_SKILL_SOURCE_ALLOWLIST</code> (or <code>file:</code>). Pin + sha256 required. Scripts default off.
       Or <a href="{{ prefix }}/tools/skills/browse">browse an allowlisted registry</a>.</p>
@@ -143,7 +149,7 @@
       <button class="btn primary" type="submit">Install / Preview</button>
     </form>
   </div>
-  <div class="card" style="margin-top:12px;">
+  <div class="card mt">
     <h3>Add skill</h3>
     <form method="post" action="{{ prefix }}/tools/catalog/skills">
       <div class="form-row cols-3">
@@ -160,8 +166,10 @@
   </div>
 </div>
 
-<div class="section" id="workspaces">
+<div class="section" id="workspaces" x-show="isTab('workspaces')" x-cloak>
   <h2>Workspaces {{ section_hint('editable') }}</h2>
+  <div class="filterable">
+  {{ table_filter('Filter workspaces…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Source</th><th>Mount Path</th><th>Mode</th><th>Allowed Agents</th><th>Retention</th><th></th></tr></thead>
@@ -225,7 +233,8 @@
       </tbody>
     </table>
   </div>
-  <div class="card" style="margin-top:12px;">
+  </div>
+  <div class="card mt">
     <h3>Add workspace</h3>
     <form method="post" action="{{ prefix }}/tools/catalog/workspaces">
       <div class="form-row cols-3">
@@ -250,7 +259,7 @@
   </div>
 </div>
 
-<div class="section" id="exec-policy">
+<div class="section" id="exec-policy" x-show="isTab('exec-policy')" x-cloak>
   <h2>Tool Execution Policy {{ section_hint('live') }}</h2>
   <div class="card">
     <div class="kv">

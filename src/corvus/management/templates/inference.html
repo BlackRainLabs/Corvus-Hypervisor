@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import page_lead, section_hint, setting_row, chips, empty_state %}
+{% from "partials/macros.html" import page_lead, section_hint, setting_row, chips, empty_state, table_filter %}
 {% block title %}Inference — Corvus Hypervisor{% endblock %}
 {% block heading %}Inference{% endblock %}
 {% block topmeta %}LLM gateway{% endblock %}
 {% block content %}
 {{ page_lead(page_leads.inference) }}
 <div class="tabs">
-  <a href="#providers" :class="{ 'active': hash === '#providers' || hash === '' }">Providers</a>
-  <a href="#token-quotas" :class="{ 'active': hash === '#token-quotas' }">Token Quotas</a>
-  <a href="#runtime-settings" :class="{ 'active': hash === '#runtime-settings' }">Runtime Settings</a>
+  <a href="#providers" :class="{ 'active': isTab('providers', true) }">Providers</a>
+  <a href="#token-quotas" :class="{ 'active': isTab('token-quotas') }">Token Quotas</a>
+  <a href="#runtime-settings" :class="{ 'active': isTab('runtime-settings') }">Runtime Settings</a>
 </div>
 
-<div class="section" id="providers">
+<div class="section" id="providers" x-show="isTab('providers', true)" x-cloak>
   <h2>LLM Providers {{ section_hint('editable') }}</h2>
   <p class="help">Edit any provider below and click Save. Credential refs are write-only after set (leave blank to keep the current value). Hybrid hosted tools also need the agent manifest <span class="mono">tool_execution_mode</span>.</p>
   {% for p in providers %}
@@ -99,9 +99,11 @@
   </div>
 </div>
 
-<div class="section" id="token-quotas">
+<div class="section" id="token-quotas" x-show="isTab('token-quotas')" x-cloak>
   <h2>Token Quotas &amp; Usage {{ section_hint('editable') }}</h2>
   <p class="help">Counters appear after LLM traffic. <strong>Used</strong> is a live counter — lowering it resets usage, it is not a second limit. Create or raise default budgets under <a href="{{ prefix }}/security#quotas">Security quotas</a> or runtime settings below.</p>
+  <div class="filterable">
+  {{ table_filter('Filter quotas…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Quota</th><th>Used</th><th>Limit</th><th>Window</th><th>Reset</th><th>Update</th></tr></thead>
@@ -130,9 +132,10 @@
       </tbody>
     </table>
   </div>
+  </div>
 </div>
 
-<div class="section" id="runtime-settings">
+<div class="section" id="runtime-settings" x-show="isTab('runtime-settings')" x-cloak>
   <h2>Runtime Settings {{ section_hint('editable') }}</h2>
   <div class="card">
     <form method="post" action="{{ prefix }}/settings/patch">

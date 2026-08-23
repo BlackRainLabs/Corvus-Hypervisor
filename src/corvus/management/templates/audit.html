@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import page_lead, empty_state %}
+{% from "partials/macros.html" import page_lead, empty_state, table_filter %}
 {% block title %}Audit — Corvus Hypervisor{% endblock %}
 {% block heading %}Audit Log{% endblock %}
 {% block topmeta %}{{ logs | length }} events (limit {{ log_limit or filters.limit }}){% endblock %}
@@ -43,6 +43,8 @@
 
 <div class="section">
   <p class="help">Showing {{ logs | length }} event{{ '' if logs | length == 1 else 's' }} (limit {{ log_limit or filters.limit }}).</p>
+  <div class="filterable">
+  {{ table_filter('Filter events…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Time</th><th>Event</th><th>Agent</th><th>Decision</th><th>Correlation</th><th></th></tr></thead>
@@ -74,6 +76,7 @@
       {% endfor %}
       </tbody>
     </table>
+  </div>
   </div>
 </div>
 {% endblock %}

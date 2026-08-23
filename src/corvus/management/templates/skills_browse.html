@@ -1,10 +1,17 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state, table_filter %}
 {% block title %}Browse Skills — Corvus Hypervisor{% endblock %}
 {% block heading %}Browse open skills{% endblock %}
 {% block topmeta %}{% if registry_url %}{{ adapter or 'registry' }} · large open catalog{% else %}allowlisted registry{% endif %}{% endblock %}
 {% block content %}
 {{ page_lead(page_leads.skills_browse) }}
+<div class="tabs">
+  <a href="{{ prefix }}/tools#tools">Tools</a>
+  <a href="{{ prefix }}/tools#skills">Skills</a>
+  <a href="{{ prefix }}/tools/skills/browse" class="active">Browse</a>
+  <a href="{{ prefix }}/tools#workspaces">Workspaces</a>
+  <a href="{{ prefix }}/tools#exec-policy">Execution Policy</a>
+</div>
 
 {% if not browse_enabled %}
 <div class="card">
@@ -64,7 +71,9 @@ CORVUS_SKILL_SOURCE_ALLOWLIST=https://codeload.github.com/,https://api.github.co
     </p>
   </div>
 
-  <div class="table-wrap" style="margin-top:10px;">
+  <div class="filterable">
+  {{ table_filter('Filter results…') }}
+  <div class="table-wrap mt">
     <table>
       <thead>
         <tr>
@@ -115,8 +124,9 @@ CORVUS_SKILL_SOURCE_ALLOWLIST=https://codeload.github.com/,https://api.github.co
       </tbody>
     </table>
   </div>
+  </div>
 
-  <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center;">
+  <div class="btn-row mt">
     {% if has_prev %}
     <a class="btn sm" href="{{ prefix }}/tools/skills/browse?q={{ query|urlencode }}&amp;page={{ page - 1 }}&amp;page_size={{ page_size }}">← Previous</a>
     {% else %}

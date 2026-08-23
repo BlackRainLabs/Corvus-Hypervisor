@@ -1,21 +1,23 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import page_lead, section_hint, setting_row, empty_state %}
+{% from "partials/macros.html" import page_lead, section_hint, setting_row, empty_state, table_filter %}
 {% block title %}Security — Corvus Hypervisor{% endblock %}
 {% block heading %}Security{% endblock %}
 {% block topmeta %}RBAC · grants · elevations{% endblock %}
 {% block content %}
 {{ page_lead(page_leads.security) }}
 <div class="tabs">
-  <a href="#rules" :class="{ 'active': hash === '#rules' || hash === '' }">Rules</a>
-  <a href="#simulator" :class="{ 'active': hash === '#simulator' }">Simulator</a>
-  <a href="#grants" :class="{ 'active': hash === '#grants' }">Grants</a>
-  <a href="#elevations" :class="{ 'active': hash === '#elevations' }">Elevations</a>
-  <a href="#quotas" :class="{ 'active': hash === '#quotas' }">Quotas</a>
-  <a href="#behavioral" :class="{ 'active': hash === '#behavioral' }">Behavioral</a>
+  <a href="#rules" :class="{ 'active': isTab('rules', true) }">Rules</a>
+  <a href="#simulator" :class="{ 'active': isTab('simulator') }">Simulator</a>
+  <a href="#grants" :class="{ 'active': isTab('grants') }">Grants</a>
+  <a href="#elevations" :class="{ 'active': isTab('elevations') }">Elevations</a>
+  <a href="#quotas" :class="{ 'active': isTab('quotas') }">Quotas</a>
+  <a href="#behavioral" :class="{ 'active': isTab('behavioral') }">Behavioral</a>
 </div>
 
-<div class="section" id="rules">
+<div class="section" id="rules" x-show="isTab('rules', true)" x-cloak>
   <h2>RBAC Rules {{ section_hint('editable') }} <span class="badge info">{{ rules | length }}</span></h2>
+  <div class="filterable">
+  {{ table_filter('Filter rules…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Priority</th><th>Effect</th><th>Subject</th><th>Action</th><th>Else</th><th>Manage</th></tr></thead>
@@ -53,7 +55,8 @@
       </tbody>
     </table>
   </div>
-  <details class="inline" style="margin-top:14px;">
+  </div>
+  <details class="inline mt-2">
     <summary>Create new rule</summary>
     <div class="body">
       <form method="post" action="{{ prefix }}/security/rules/create">
@@ -66,13 +69,13 @@
   "condition": {},
   "effect": "allow"
 }</textarea>
-        <button class="btn primary" type="submit" style="margin-top:8px;">Create rule</button>
+        <button class="btn primary mt" type="submit">Create rule</button>
       </form>
     </div>
   </details>
 </div>
 
-<div class="section" id="simulator">
+<div class="section" id="simulator" x-show="isTab('simulator')" x-cloak>
   <h2>Rule Simulator {{ section_hint('dry-run') }}</h2>
   <div class="grid cols-2">
     <div class="card">
@@ -103,8 +106,10 @@
   </div>
 </div>
 
-<div class="section" id="grants">
+<div class="section" id="grants" x-show="isTab('grants')" x-cloak>
   <h2>Memory Grants {{ section_hint('editable') }}</h2>
+  <div class="filterable">
+  {{ table_filter('Filter grants…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Subject</th><th>Target</th><th>Namespace</th><th>Permissions</th><th>Expires</th><th></th></tr></thead>
@@ -125,7 +130,8 @@
       </tbody>
     </table>
   </div>
-  <details class="inline" style="margin-top:14px;">
+  </div>
+  <details class="inline mt-2">
     <summary>Create grant</summary>
     <div class="body">
       <form method="post" action="{{ prefix }}/security/grants/create">
@@ -161,8 +167,10 @@
   </details>
 </div>
 
-<div class="section" id="elevations">
+<div class="section" id="elevations" x-show="isTab('elevations')" x-cloak>
   <h2>Elevations {{ section_hint('editable') }}</h2>
+  <div class="filterable">
+  {{ table_filter('Filter elevations…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Status</th><th>Agent</th><th>Context</th><th>Created</th><th>Decision</th></tr></thead>
@@ -238,11 +246,14 @@
       </tbody>
     </table>
   </div>
+  </div>
 </div>
 
-<div class="section" id="quotas">
+<div class="section" id="quotas" x-show="isTab('quotas')" x-cloak>
   <h2>Quotas &amp; Limits {{ section_hint('editable') }}</h2>
   <p class="help"><strong>Used</strong> is a live counter. Changing it resets usage rather than setting a second limit. Elevation webhook URL/secret live under <a href="{{ prefix }}/system#config">System configuration</a>.</p>
+  <div class="filterable">
+  {{ table_filter('Filter quotas…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Quota</th><th>Used</th><th>Limit</th><th>Window</th><th>Update</th></tr></thead>
@@ -269,9 +280,10 @@
       </tbody>
     </table>
   </div>
+  </div>
 </div>
 
-<div class="section" id="behavioral">
+<div class="section" id="behavioral" x-show="isTab('behavioral')" x-cloak>
   <h2>Behavioral Monitoring {{ section_hint('editable') }}</h2>
   <div class="card">
     <form method="post" action="{{ prefix }}/settings/patch">

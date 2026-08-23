@@ -4,20 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign in — Corvus Hypervisor Operator Console</title>
+  <link rel="icon" href="{{ static_url }}/brand/logo.png" type="image/png">
   <link rel="stylesheet" href="{{ static_url }}/corvus.css">
 </head>
-<body>
+<body class="login-body">
+  <div class="lab-atmosphere" aria-hidden="true"></div>
   <div class="login-wrap">
     <div class="card login-card">
       <div class="brand">
-        <div class="logo"><span class="mark">C</span> Corvus Hypervisor</div>
-        <div class="sub">Operator Console</div>
+        <div class="logo">
+          <img class="brand-mark" src="{{ static_url }}/brand/logo.png" width="28" height="28" alt="">
+          Corvus
+        </div>
+        <div class="sub">Operator Console · Black Rain Labs</div>
       </div>
-      {% if err %}<div class="badge danger" style="display:block;text-align:center;margin:8px 0 4px;padding:8px;">{{ err }}</div>{% endif %}
+      {% if err %}
+      <div class="badge danger form-error" id="login-error" role="alert">{{ err }}</div>
+      {% endif %}
       <form method="post" action="{{ prefix }}/login">
         <div class="field">
           <label for="username">Username</label>
-          <input id="username" name="username" autofocus autocomplete="username" required>
+          <input id="username" name="username" autofocus autocomplete="username" required
+                 {% if err %}aria-invalid="true" aria-describedby="login-error"{% endif %}>
           <div class="help">A Corvus user with the <span class="mono">admin</span> or <span class="mono">operator</span> role.</div>
         </div>
         <div class="field">
@@ -25,7 +33,7 @@
           <input type="password" id="password" name="password" autocomplete="current-password" required>
           <div class="help">Checked against the hashed credential stored for that user.</div>
         </div>
-        <button class="btn primary" type="submit" style="width:100%;justify-content:center;">Sign in</button>
+        <button class="btn primary" type="submit">Sign in</button>
       </form>
     </div>
   </div>

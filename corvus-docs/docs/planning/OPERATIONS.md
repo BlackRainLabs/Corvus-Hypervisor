@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-20
+**Last Updated:** 2026-08-22
 **Related Documents:** ../architecture/hypervisor/MANAGEMENT-API.md, COMPONENT-STATUS.md, PHASES.md, ROADMAP.md, ../../../CHANGES.md
 **Must Update on Change:** ../../../CHANGES.md
 
@@ -113,8 +113,10 @@ primary day-2 ops path.
 | `CORVUS_API_RATE_LIMIT_PER_MINUTE` | `100` | Management API limit per API key (`0` disables); UI in-process calls are exempt |
 | `CORVUS_MGMT_HOST` / `CORVUS_MGMT_PORT` | `127.0.0.1` / `8080` | Management bind; editable in GUI with restart_required |
 
-The console is bundled with vendored HTMX and Alpine.js assets (no CDN / external
-network required).
+The console is bundled with vendored HTMX, Alpine.js, Inter / Space Grotesk /
+JetBrains Mono (latin WOFF2), and the Black Rain Labs mark (no CDN / external
+network required). Appearance follows the public Neural Command Center theme
+(void blacks, silver type, HUD panels, inverted primary buttons).
 
 ## Observability
 

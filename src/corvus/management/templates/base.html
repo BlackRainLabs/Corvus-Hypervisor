@@ -4,34 +4,45 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Corvus Hypervisor Operator Console{% endblock %}</title>
+  <link rel="icon" href="{{ static_url }}/brand/logo.png" type="image/png">
   <link rel="stylesheet" href="{{ static_url }}/corvus.css">
   <script src="{{ static_url }}/htmx.min.js"></script>
   <script defer src="{{ static_url }}/alpine.min.js"></script>
 </head>
-<body x-data="{ hash: '' }" x-init="hash = location.hash; window.addEventListener('hashchange', () => hash = location.hash)">
-  {% if msg %}<div class="toast ok" x-data="{s:true}" x-show="s" x-init="setTimeout(()=>s=false,3500)">{{ msg }}</div>{% endif %}
-  {% if err %}<div class="toast err" x-data="{s:true}" x-show="s" x-init="setTimeout(()=>s=false,6000)">{{ err }}</div>{% endif %}
+<body x-data="corvusShell()" x-init="init()">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  {% if msg %}<div class="toast ok" role="status" x-data="{s:true}" x-show="s" x-init="setTimeout(()=>s=false,3500)">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="toast err" role="alert" x-data="{s:true}" x-show="s" x-init="setTimeout(()=>s=false,6000)">{{ err }}</div>{% endif %}
+  <div class="nav-overlay" x-show="navOpen" x-cloak @click="navOpen = false"></div>
   <div class="layout">
-    <aside class="sidebar">
+    <aside class="sidebar" id="console-nav" :class="{ open: navOpen }">
       <div class="brand">
-        <div class="logo"><span class="mark">C</span> Corvus Hypervisor</div>
-        <div class="sub">Operator Console</div>
+        <a href="{{ prefix }}/" class="logo">
+          <img class="brand-mark" src="{{ static_url }}/brand/logo.png" width="28" height="28" alt="">
+          Corvus
+        </a>
+        <div class="sub">Operator Console · Black Rain Labs</div>
       </div>
       <ul class="nav">
+        {% from "partials/macros.html" import nav_icon %}
         {% for item in nav %}
         <li class="nav-item {% if item.id == active %}active{% endif %}">
-          <a href="{{ prefix }}{{ item.path }}">
-            <span class="nav-ico">{{ item.mark or item.label[:2] }}</span>
+          <a href="{{ prefix }}{{ item.path }}" @click="navOpen = false">
+            {{ nav_icon(item.id) }}
             <span>{{ item.label }}</span>
           </a>
           {% if item.id == active and item.subs %}
+          {% set nav_index = (prefix ~ item.path).rstrip('/') %}
+          {% set current = request.url.path.rstrip('/') %}
+          {% set on_index = current == nav_index or (item.path == '/' and current == prefix.rstrip('/')) %}
           <ul class="subnav">
             {% for sub in item.subs %}
             <li><a href="{{ prefix }}{{ item.path }}{{ sub.anchor }}"
+                   @click="navOpen = false"
                    {% if sub.anchor.startswith('/') %}
                    class="{% if request.url.path.endswith(sub.anchor) %}active{% endif %}"
                    {% else %}
-                   :class="{ 'active': hash === '{{ sub.anchor }}' || (hash === '' && {{ loop.first | tojson }}) }"
+                   :class="{ 'active': isTab('{{ sub.anchor.lstrip('#') }}', {{ (loop.first and on_index) | tojson }}) }"
                    {% endif %}>
               {{ sub.label }}
             </a></li>
@@ -47,16 +58,45 @@
     </aside>
     <div class="main">
       <header class="topbar">
+        <button class="nav-toggle" type="button"
+                @click="navOpen = !navOpen"
+                :aria-expanded="navOpen.toString()"
+                aria-controls="console-nav"
+                :aria-label="navOpen ? 'Close navigation' : 'Open navigation'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/>
+          </svg>
+        </button>
         <h1>{% block heading %}{% endblock %}</h1>
         <span class="spacer"></span>
         <span class="pill">{% block topmeta %}{% endblock %}</span>
         {% if current_user %}<span class="pill">Signed in as <strong>{{ current_user }}</strong></span>{% endif %}
         <a class="btn sm" href="{{ prefix }}/logout">Sign out</a>
       </header>
-      <main class="content">
+      <main class="content" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
       </main>
     </div>
   </div>
+  <script>
+  function corvusShell() {
+    return {
+      hash: "",
+      navOpen: false,
+      init() {
+        this.hash = location.hash || "";
+        window.addEventListener("hashchange", () => {
+          this.hash = location.hash || "";
+          this.navOpen = false;
+        });
+      },
+      isTab(id, isDefault) {
+        const h = (this.hash || "").replace(/^#/, "");
+        if (!h) return !!isDefault;
+        return h === id;
+      },
+    };
+  }
+  </script>
 </body>
 </html>
