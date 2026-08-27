@@ -1,19 +1,21 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import page_lead, section_hint, setting_row, empty_state %}
+{% from "partials/macros.html" import page_lead, section_hint, setting_row, empty_state, table_filter %}
 {% block title %}Memory — Corvus Hypervisor{% endblock %}
 {% block heading %}Memory{% endblock %}
 {% block topmeta %}central memory service{% endblock %}
 {% block content %}
 {{ page_lead(page_leads.memory) }}
 <div class="tabs">
-  <a href="#namespaces" :class="{ 'active': hash === '#namespaces' || hash === '' }">Namespaces</a>
-  <a href="#sweeper" :class="{ 'active': hash === '#sweeper' }">Retention Sweeper</a>
-  <a href="#encryption" :class="{ 'active': hash === '#encryption' }">Encryption</a>
+  <a href="#namespaces" :class="{ 'active': isTab('namespaces', true) }">Namespaces</a>
+  <a href="#sweeper" :class="{ 'active': isTab('sweeper') }">Retention Sweeper</a>
+  <a href="#encryption" :class="{ 'active': isTab('encryption') }">Encryption</a>
 </div>
 
-<div class="section" id="namespaces">
+<div class="section" id="namespaces" x-show="isTab('namespaces', true)" x-cloak>
   <h2>Namespace Catalog {{ section_hint('editable') }}</h2>
   <p class="help">Per-agent quota overrides are edited on each <a href="{{ prefix }}/agents">agent detail</a> page.</p>
+  <div class="filterable">
+  {{ table_filter('Filter namespaces…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Namespace</th><th>Retention Policy</th><th>Max records</th><th>Max record bytes</th><th>Default TTL (seconds)</th><th></th></tr></thead>
@@ -62,7 +64,8 @@
       </tbody>
     </table>
   </div>
-  <div class="card" style="margin-top:12px;">
+  </div>
+  <div class="card mt">
     <h3>Add namespace</h3>
     <form method="post" action="{{ prefix }}/tools/catalog/memory-namespaces">
       <div class="form-row cols-3">
@@ -81,7 +84,7 @@
   </div>
 </div>
 
-<div class="section" id="sweeper">
+<div class="section" id="sweeper" x-show="isTab('sweeper')" x-cloak>
   <h2>Retention Sweeper {{ section_hint('editable') }}</h2>
   <div class="card">
     <div class="kv">
@@ -99,7 +102,7 @@
   </div>
 </div>
 
-<div class="section" id="encryption">
+<div class="section" id="encryption" x-show="isTab('encryption')" x-cloak>
   <h2>Encryption at Rest {{ section_hint('editable') }}</h2>
   <div class="card">
     <form method="post" action="{{ prefix }}/settings/patch">

@@ -1,17 +1,19 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state, table_filter %}
 {% block title %}Agents — Corvus Hypervisor{% endblock %}
 {% block heading %}Agents{% endblock %}
 {% block topmeta %}{{ agents | length }} registered{% endblock %}
 {% block content %}
 {{ page_lead(page_leads.agents) }}
 <div class="tabs">
-  <a href="#all-agents" :class="{ 'active': hash === '#all-agents' || hash === '' }">All Agents</a>
-  <a href="#create-agent" :class="{ 'active': hash === '#create-agent' }">Create Agent</a>
+  <a href="#all-agents" :class="{ 'active': isTab('all-agents', true) }">All Agents</a>
+  <a href="#create-agent" :class="{ 'active': isTab('create-agent') }">Create Agent</a>
 </div>
 
-<div class="section" id="all-agents">
+<div class="section" id="all-agents" x-show="isTab('all-agents', true)" x-cloak>
   <h2>All Agents {{ section_hint('editable') }}</h2>
+  <div class="filterable">
+  {{ table_filter('Filter agents…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Agent</th><th>Status</th><th>VM Instance</th><th>Guest CID</th><th>Last Error</th><th>Actions</th></tr></thead>
@@ -49,9 +51,10 @@
       </tbody>
     </table>
   </div>
+  </div>
 </div>
 
-<div class="section" id="create-agent">
+<div class="section" id="create-agent" x-show="isTab('create-agent')" x-cloak>
   <h2>Create Agent {{ section_hint('editable') }}</h2>
   <div class="card">
     <form method="post" action="{{ prefix }}/agents/create">

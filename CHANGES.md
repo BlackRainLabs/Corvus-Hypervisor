@@ -1,8 +1,25 @@
 # Architecture Changes Log
 
-**Last Updated:** 2026-08-20
+**Last Updated:** 2026-08-22
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
+
+## [2026-08-22] - Operator Console: Black Rain Labs theme + friendlier UX
+
+**Documents Modified:**
+- `src/corvus/management/static/corvus.css`, `static/brand/logo.png`, `static/fonts/`
+- `src/corvus/management/templates/base.html`, `login.html`, `partials/macros.html`
+- Tabbed/list templates (agents, tools, users, security, inference, memory, system, audit, skills_browse)
+- `tests/test_ui.py`, `OPERATIONS.md`, `CHANGES.md`
+
+**Key Changes:**
+- Console visual language matches the Black Rain Labs Neural Command Center site: void blacks, silver type, HUD bezel panels, inverted primary buttons. Accent blue is gone.
+- Vendored Inter, Space Grotesk, and JetBrains Mono (latin WOFF2, SIL OFL) plus the circular BRL logo — still no CDN.
+- Friendlier operator UX: mobile nav drawer, hash tabs that show one section, Alpine table filters, SVG nav marks, skip-link and focus-visible rings. JSON editors and `/v1` handlers unchanged.
+
+**Reviewed By:** Black Rain Labs - R&D
+
+---
 
 ## [2026-08-20] - Phase 10d: large open skill catalogs (SkillsMP + browse UX)
 

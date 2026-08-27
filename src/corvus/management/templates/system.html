@@ -6,17 +6,17 @@
 {% block content %}
 {{ page_lead(page_leads.system) }}
 <div class="tabs">
-  <a href="#health" :class="{ 'active': hash === '#health' || hash === '' }">Health</a>
-  <a href="#metrics" :class="{ 'active': hash === '#metrics' }">Metrics</a>
-  <a href="#config" :class="{ 'active': hash === '#config' }">Configuration</a>
+  <a href="#health" :class="{ 'active': isTab('health', true) }">Health</a>
+  <a href="#metrics" :class="{ 'active': isTab('metrics') }">Metrics</a>
+  <a href="#config" :class="{ 'active': isTab('config') }">Configuration</a>
 </div>
 
-<div class="section" id="health">
+<div class="section" id="health" x-show="isTab('health', true)" x-cloak>
   <h2>Health {{ section_hint('live') }}</h2>
   {% include "partials/health_tiles.html" %}
 </div>
 
-<div class="section" id="metrics">
+<div class="section" id="metrics" x-show="isTab('metrics')" x-cloak>
   <h2>Prometheus Metrics {{ section_hint('live') }}</h2>
   <p class="help">Scrape endpoint: <span class="mono">GET /v1/metrics</span> with the Management API key. OpenAPI: <a href="/docs" target="_blank">/docs</a>.</p>
   <details class="inline">
@@ -25,7 +25,7 @@
   </details>
 </div>
 
-<div class="section" id="config">
+<div class="section" id="config" x-show="isTab('config')" x-cloak>
   <h2>Server Configuration {{ section_hint('editable') }}</h2>
   <p class="help">DB-backed settings (env wins if set as break-glass). Secrets are write-only. Bind host/port/transport require an operator restart of <span class="mono">corvus-server</span> — the UI does not auto-kill the process. Changing the API key or session secret immediately affects clients and console logins.</p>
   <div class="card">

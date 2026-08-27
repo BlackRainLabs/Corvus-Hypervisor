@@ -1,0 +1,5 @@
+Vendored UI fonts (latin subsets, WOFF2). No CDN at runtime.
+
+- Inter — SIL Open Font License 1.1 — https://github.com/rsms/inter
+- Space Grotesk — SIL Open Font License 1.1 — https://github.com/floriankarsten/space-grotesk
+- JetBrains Mono — SIL Open Font License 1.1 — https://github.com/JetBrains/JetBrainsMono

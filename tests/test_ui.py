@@ -123,6 +123,12 @@ async def test_login_page_renders(app_ctx):
         assert "Operator Console" in resp.text
         assert "admin" in resp.text
         assert "operator" in resp.text
+        assert "brand/logo.png" in resp.text
+        assert "Black Rain Labs" in resp.text
+        assert "fonts.googleapis.com" not in resp.text
+        assert "cdn.tailwindcss.com" not in resp.text
+        assert 'id="login-error"' not in resp.text
+        assert 'aria-describedby="login-error"' not in resp.text
 
 
 @pytest.mark.asyncio
@@ -145,6 +151,48 @@ async def test_all_nav_routes_render(app_ctx):
             resp = await client.get(path)
             assert resp.status_code == 200, path
             assert marker in resp.text, path
+            assert "brand/logo.png" in resp.text, path
+            assert "Skip to content" in resp.text, path
+            assert "fonts.googleapis.com" not in resp.text, path
+            assert 'x-data="corvusShell()"' in resp.text, path
+            assert "nav-toggle" in resp.text, path
+
+
+@pytest.mark.asyncio
+async def test_console_tabs_filters_and_static_brand(app_ctx):
+    app = create_app(app_ctx)
+    async with _client(app) as client:
+        await _login(client)
+        agents = await client.get("/ui/agents")
+        assert agents.status_code == 200
+        assert "isTab('all-agents', true)" in agents.text
+        assert "isTab('create-agent')" in agents.text
+        assert "Filter agents" in agents.text
+        assert 'class="table-filter"' in agents.text
+        assert 'class="nav-ico"' in agents.text
+
+        security = await client.get("/ui/security")
+        assert security.status_code == 200
+        assert "isTab('rules', true)" in security.text
+        assert "isTab('elevations')" in security.text
+        assert "Filter rules" in security.text
+
+        audit = await client.get("/ui/audit")
+        assert audit.status_code == 200
+        assert "Filter events" in audit.text
+
+        css = await client.get("/ui/static/corvus.css")
+        assert css.status_code == 200
+        assert "--bg-void: #0a0a0b" in css.text
+        assert "fonts/inter-latin.woff2" in css.text
+        assert "fonts.googleapis.com" not in css.text
+
+        logo = await client.get("/ui/static/brand/logo.png")
+        assert logo.status_code == 200
+        assert logo.headers["content-type"].startswith("image/")
+
+        font = await client.get("/ui/static/fonts/inter-latin.woff2")
+        assert font.status_code == 200
 
 
 @pytest.mark.asyncio

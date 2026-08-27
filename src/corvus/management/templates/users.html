@@ -1,19 +1,21 @@
 {% extends "base.html" %}
-{% from "partials/macros.html" import page_lead, section_hint, empty_state %}
+{% from "partials/macros.html" import page_lead, section_hint, empty_state, table_filter %}
 {% block title %}Users & Access — Corvus Hypervisor{% endblock %}
 {% block heading %}Users &amp; Access{% endblock %}
 {% block topmeta %}{{ users | length }} users{% endblock %}
 {% block content %}
 {{ page_lead(page_leads.users) }}
 <div class="tabs">
-  <a href="#users" :class="{ 'active': hash === '#users' || hash === '' }">Users</a>
-  <a href="#create-user" :class="{ 'active': hash === '#create-user' }">Create User</a>
-  <a href="#roles" :class="{ 'active': hash === '#roles' }">Roles</a>
-  <a href="#groups" :class="{ 'active': hash === '#groups' }">Groups</a>
+  <a href="#users" :class="{ 'active': isTab('users', true) }">Users</a>
+  <a href="#create-user" :class="{ 'active': isTab('create-user') }">Create User</a>
+  <a href="#roles" :class="{ 'active': isTab('roles') }">Roles</a>
+  <a href="#groups" :class="{ 'active': isTab('groups') }">Groups</a>
 </div>
 
-<div class="section" id="users">
+<div class="section" id="users" x-show="isTab('users', true)" x-cloak>
   <h2>Users {{ section_hint('editable') }}</h2>
+  <div class="filterable">
+  {{ table_filter('Filter users…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Role</th><th>Groups</th><th>Privileges</th><th>Allowed Agents</th><th>Credential</th></tr></thead>
@@ -33,9 +35,10 @@
       </tbody>
     </table>
   </div>
+  </div>
 </div>
 
-<div class="section" id="create-user">
+<div class="section" id="create-user" x-show="isTab('create-user')" x-cloak>
   <h2>Create User {{ section_hint('editable') }}</h2>
   <p class="help">To change an existing user, open their detail page from the table above. Saving an existing ID here still upserts.</p>
   <div class="card">
@@ -85,7 +88,7 @@
   </div>
 </div>
 
-<div class="section" id="roles">
+<div class="section" id="roles" x-show="isTab('roles')" x-cloak>
   <h2>Roles &amp; Privileges {{ section_hint('live') }}</h2>
   <div class="card">
     <div class="kv">
@@ -98,8 +101,10 @@
   </div>
 </div>
 
-<div class="section" id="groups">
+<div class="section" id="groups" x-show="isTab('groups')" x-cloak>
   <h2>Groups {{ section_hint('editable') }}</h2>
+  <div class="filterable">
+  {{ table_filter('Filter groups…') }}
   <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Parent</th><th>Members</th><th>Rules</th><th>Actions</th></tr></thead>
@@ -164,7 +169,8 @@
       </tbody>
     </table>
   </div>
-  <div class="card" style="margin-top:12px;">
+  </div>
+  <div class="card mt">
     <h3>Create group</h3>
     <form method="post" action="{{ prefix }}/users/groups/create">
       <div class="form-row cols-3">
