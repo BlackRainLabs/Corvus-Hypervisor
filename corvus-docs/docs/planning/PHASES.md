@@ -2,7 +2,7 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-20
+**Last Updated:** 2026-08-27
 **Related Documents:** CHANGES.md, ROADMAP.md, PHASE-10-SKILLS.md
 **Must Update on Change:** CHANGES.md
 
@@ -210,6 +210,6 @@ Protocol / star topology / Engine 3 bypass rules; Phase 8 SPA rewrite; Phase 9 s
 
 ### Forward sequence
 
-See [ROADMAP.md](ROADMAP.md) and [PHASE-10-SKILLS.md](PHASE-10-SKILLS.md): **Phase 10** skill runtime → **Phase 11** FC workspace mounts → **Phase 12** tools + ops depth.
+**Pivot (2026-08-27):** near-term work is **Corvus-Node** (new single-agent repo), not more fleet slices in this tree. Phase 11 FC workspace mounts and Phase 12 catalog-tool depth are frozen here. See [ROADMAP.md](ROADMAP.md).
 
 **Black Rain Labs - Research & Development Division**

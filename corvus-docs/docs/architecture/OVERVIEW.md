@@ -2,17 +2,25 @@
 **Status:** Implemented — Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-20
-**Related Documents:** hypervisor/ARCHITECTURE.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, agent-vm/ARCHITECTURE.md, CHANGES.md
+**Last Updated:** 2026-08-27
+**Related Documents:** hypervisor/ARCHITECTURE.md, hypervisor/FRAMEWORK-MESSAGE-PROTOCOL.md, agent-vm/ARCHITECTURE.md, planning/ROADMAP.md, CHANGES.md
 **Must Update on Change:** CHANGES.md (repository root)
 **AI Instruction:** When revising this document, review Core Principles & Invariants here, update CHANGES.md, and ensure consistency with related documents. Do not contradict core fundamentals.
 **API Caution:** Any changes must consider impact on the Management API surface (see hypervisor/MANAGEMENT-API.md). Maintain backward compatibility where possible and document breaking changes.
 
 # Corvus Architecture Overview
 
-**Status:** Implemented — Current
+**Status:** Implemented — Current (fleet control plane; agent product moved)
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
+
+## Product direction (2026-08-27)
+
+The **agent product** is **Corvus-Node**: one agent instance with the same 4-engine model, RBAC, and no-LLM-to-tool bypass. That work lives in a new repository, rewritten from scratch — not by stripping this tree.
+
+This repository is the **future supervisor / control plane** (fleet of Corvus-Node instances, operator dash). Near-term fleet features (Phase 11–12 workspace mounts, extra catalog tools as the next slice) are frozen here. The Operator Console (`/ui`) is a supervisor-dash prototype, not the Corvus-Node v1 UI.
+
+The invariants below still govern **this** codebase. Corvus-Node transfers them to a **host Node** (one identity, policy, audit, workspace allowlist, Firecracker + vsock; engines only in the guest) instead of a multi-agent hypervisor.
 
 ## Core Principles & Invariants (Authoritative)
 
@@ -29,7 +37,7 @@ These principles must be respected across all documents:
 
 ## Vision
 
-Corvus is a security-first multi-agent hypervisor that treats agents as potentially untrusted workloads. It provides strong isolation using Firecracker microVMs and enforces centralized mediation through the Corvus Server.
+Corvus Hypervisor is a security-first **control plane** for agentic systems: Firecracker isolation, centralized mediation, RBAC, and full audit. The day-to-day agent harness is Corvus-Node (single instance). This tree remains the candidate for a later supervisor dash that manages many of those instances.
 
 ## Major Components
 

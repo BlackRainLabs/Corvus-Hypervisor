@@ -2,17 +2,19 @@
 **Status:** Current
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-**Last Updated:** 2026-08-20
-**Related Documents:** CHANGES.md
+**Last Updated:** 2026-08-27
+**Related Documents:** CHANGES.md, ROADMAP.md
 **Must Update on Change:** CHANGES.md
 
 # Component Status
+
+**Freeze (2026-08-27):** this tree is the future supervisor / control plane. The agent product is Corvus-Node (new repo). Do not treat Phase 11–12 as the next implementation slice here. See [ROADMAP.md](ROADMAP.md).
 
 ## Architecture Documents
 
 | Component                    | Status                    | Notes |
 |-----------------------------|---------------------------|-------|
-| Overview                    | Implemented — Current     | Core principles authoritative |
+| Overview                    | Implemented — Current     | Core principles authoritative; 2026-08-27 product split (Corvus-Node) |
 | Hypervisor Architecture     | Implemented — Current     | Subsystems aligned with RBAC, Memory, Protocol |
 | FrameworkMessage Protocol   | Implemented — Current     | Payload schemas, correlation, handshake, errors |
 | RBAC & Policy               | Phase 5.4 Implemented   | Typed rules, aliases, grants, quota metering, elevations, audit, behavioral monitoring, optional memory encryption |
