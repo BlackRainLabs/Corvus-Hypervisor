@@ -1,7 +1,5 @@
 # Corvus Hypervisor
 
-**Product pivot (2026-08-27):** the day-to-day **agent product** is **[Corvus-Node](https://github.com/BlackRainLabs/Corvus-Node)** (host Node, four engines in one Firecracker guest, vsock only) in a new repository. This tree is the **future fleet control plane** — a dash for many Corvus-Node instances. Near-term fleet work here is frozen; use this repo as a reference, not the next agent slice. See [ROADMAP](corvus-docs/docs/planning/ROADMAP.md).
-
 Security-first, centrally mediated multi-agent hypervisor for high-assurance agentic systems.
 
 Corvus treats agents as potentially untrusted workloads. Every message and action crosses a single control plane—the **Corvus Server**—which enforces RBAC, audits every hop, and mediates tools, memory, and LLM access. Production isolation uses [Firecracker](https://firecracker-microvm.github.io/) microVMs; TCP mode supports local development and CI.
@@ -57,7 +55,7 @@ Deep dive: [Architecture Overview](corvus-docs/docs/architecture/OVERVIEW.md)
 
 Phases **1–9** are complete: protocol and control plane, Firecracker/Node path, memory service, elevation and behavioral monitoring, ops tooling and Docker, LLM gateway (streaming + hybrid tools), the operator console, and GUI full configurability with operator chat (Phase 9.6).
 
-This is an early public release, not 1.0. Agent work continues in **Corvus-Node**. This hypervisor remains a control-plane candidate (Operator Console as a later dash prototype). Phase 11–12 fleet mounts and catalog-tool depth are deferred here. See [ROADMAP](corvus-docs/docs/planning/ROADMAP.md) and [COMPONENT-STATUS](corvus-docs/docs/planning/COMPONENT-STATUS.md).
+This is an early public release, not 1.0. Still ahead: skill runtime beyond catalog placeholders, Firecracker workspace mounts, a broader tool surface, multi-host scaling, and richer observability. See [ROADMAP](corvus-docs/docs/planning/ROADMAP.md) and [COMPONENT-STATUS](corvus-docs/docs/planning/COMPONENT-STATUS.md).
 
 ## Requirements
 

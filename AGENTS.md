@@ -1,9 +1,7 @@
 # AGENTS.md — Instructions for AI Coding Agents
 
 **Project:** Corvus Hypervisor  
-**Purpose:** Future supervisor / control plane for Corvus-Node instances. Fleet hypervisor features are frozen; do not add them as the next slice.
-
-**Product split:** Corvus-Node (new repo) is the single-agent harness. This tree is a read-only reference plus later dash. Operator Console (`/ui`) is a supervisor-dash prototype, not Corvus-Node v1.
+**Purpose:** High-assurance, security-first multi-agent hypervisor using Firecracker microVMs.
 
 ## Critical Rules
 
@@ -29,8 +27,6 @@
    - Update "Last Updated" dates.
    - Maintain Related Documents and "Must Update on Change: CHANGES.md".
    - Avoid `---` frontmatter separators.
-
-6. **Do not implement Corvus-Node here.** Single-agent harness work belongs in the Corvus-Node repository. Do not strip this tree to make a single agent.
 
 See the full workflow rules in `corvus-docs/docs/architecture/agent-vm/AGENT-WORKFLOW.md`.
 

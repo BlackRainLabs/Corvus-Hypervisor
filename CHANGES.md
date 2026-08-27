@@ -1,23 +1,8 @@
 # Architecture Changes Log
 
-**Last Updated:** 2026-08-27
+**Last Updated:** 2026-08-22
 **Organization:** Black Rain Labs
 **Division:** Research & Development Division
-
-## [2026-08-27] - Pivot: Corvus-Node is the agent product
-
-**Documents Modified:**
-- `README.md`, `AGENTS.md`, `CHANGES.md`
-- `corvus-docs/docs/architecture/OVERVIEW.md`
-- `corvus-docs/docs/planning/ROADMAP.md`, `PHASES.md`, `COMPONENT-STATUS.md`
-
-**Key Changes:**
-- Near-term path is **Corvus-Node** (new repo: host Node, four guest engines, vsock) with the same 4-engine model, RBAC, and Engine 3 isolation — not further fleet/hypervisor slices in this tree.
-- This repository is frozen as the **future fleet control plane** and a read-only reference. Operator Console remains a later dash prototype. Phase 11–12 fleet work is deferred.
-
-**Reviewed By:** Black Rain Labs - R&D
-
----
 
 ## [2026-08-22] - Operator Console: Black Rain Labs theme + friendlier UX
 
