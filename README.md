@@ -1,4 +1,4 @@
-This project has been halted. We have decided on building Corvus-Node a single agent instance that will later have a central control plane to supervise and control multiple Corvus-Nodes.
+This project has been halted. We have decided on building Corvus-Node a single agent instance that will later have a central control plane to supervise and control multiple Corvus-Nodes. A flock, if you will..
 
 https://www.github.com/BlackRainLabs/Corvus-Node
 
